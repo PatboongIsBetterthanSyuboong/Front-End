@@ -1,0 +1,168 @@
+.container {
+  background: #444444;
+  color: white;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.title {
+  margin: 0 0 16px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+}
+
+.dateSection {
+  margin-bottom: 16px;
+}
+
+.dateInputs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.dateInput {
+  background: #2d3748;
+  border: 1px solid #4a5568;
+  color: white;
+  padding: 6px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.dateSeparator {
+  color: white;
+  font-size: 14px;
+}
+
+.periodButtons {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.periodButton {
+  background: #2d3748;
+  border: 1px solid #4a5568;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.periodButton:hover {
+  background: #4a5568;
+}
+
+.periodButton.active {
+  background: #3182ce;
+  border-color: #3182ce;
+}
+
+.searchButton {
+  background: #38a169;
+  border: none;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  margin-left: 8px;
+}
+
+.checkboxSection {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 16px;
+  font-size: 12px;
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.checkbox input {
+  margin: 0;
+}
+
+.historyList {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.historyItem {
+  margin-bottom: 16px;
+  border: 1px solid #4a5568;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.historyHeader {
+  background: #2d3748;
+  padding: 8px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+}
+
+.historyDate {
+  font-weight: 600;
+}
+
+.historyHospital {
+  color: #a0aec0;
+}
+
+.detailsList {
+  padding: 8px;
+}
+
+.detailItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 11px;
+}
+
+.detailItem:last-child {
+  border-bottom: none;
+}
+
+.detailCode {
+  min-width: 40px;
+  font-weight: 600;
+  color: #ffd700;
+}
+
+.detailContent {
+  flex: 1;
+}
+
+.detailValue {
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.detailDescription {
+  color: #a0aec0;
+  font-size: 10px;
+  line-height: 1.3;
+}
+
+.detailCount {
+  min-width: 20px;
+  text-align: right;
+  color: #63b3ed;
+}

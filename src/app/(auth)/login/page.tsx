@@ -18,9 +18,9 @@ export default function LoginPage() {
     setError(null);
     try {
       await login({ email, password });
-      router.push("/");
-    } catch (err: any) {
-      setError(err?.message ?? "로그인에 실패했습니다");
+      router.push("/dashboard");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "로그인에 실패했습니다");
     } finally {
       setLoading(false);
     }
@@ -28,7 +28,9 @@ export default function LoginPage() {
 
   return (
     <div style={{ maxWidth: 360, margin: "64px auto", padding: 24 }}>
-      <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 16 }}>로그인</h1>
+      <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 16 }}>
+        로그인
+      </h1>
       <form onSubmit={handleSubmit} style={{ display: "grid", gap: 12 }}>
         <label style={{ display: "grid", gap: 6 }}>
           <span>이메일</span>
@@ -38,7 +40,11 @@ export default function LoginPage() {
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"
             required
-            style={{ padding: "8px 12px", border: "1px solid #ddd", borderRadius: 8 }}
+            style={{
+              padding: "8px 12px",
+              border: "1px solid #ddd",
+              borderRadius: 8,
+            }}
           />
         </label>
         <label style={{ display: "grid", gap: 6 }}>
@@ -49,7 +55,11 @@ export default function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"
             required
-            style={{ padding: "8px 12px", border: "1px solid #ddd", borderRadius: 8 }}
+            style={{
+              padding: "8px 12px",
+              border: "1px solid #ddd",
+              borderRadius: 8,
+            }}
           />
         </label>
 
@@ -81,5 +91,3 @@ export default function LoginPage() {
     </div>
   );
 }
-
-

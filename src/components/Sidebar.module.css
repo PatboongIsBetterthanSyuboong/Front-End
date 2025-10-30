@@ -1,0 +1,30 @@
+.sidebar {
+  width: 200px;
+  background: #333336;
+  border-right: 1px solid #e2e8f0;
+  height: 100vh;
+  padding: 16px 0;
+}
+
+.menuItem {
+  width: 100%;
+  padding: 12px 16px;
+  border: none;
+  background: transparent;
+  color: white;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.menuItem:hover {
+  background: #303032;
+}
+
+.menuItem.active {
+  background: #515154;
+}
