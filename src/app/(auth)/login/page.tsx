@@ -7,7 +7,7 @@ import { login } from "@/services/auth";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -17,7 +17,7 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
     try {
-      await login({ email, password });
+      await login({ username, password });
       router.push("/dashboard");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "로그인에 실패했습니다");
@@ -33,12 +33,12 @@ export default function LoginPage() {
       </h1>
       <form onSubmit={handleSubmit} style={{ display: "grid", gap: 12 }}>
         <label style={{ display: "grid", gap: 6 }}>
-          <span>이메일</span>
+          <span>사용자 ID</span>
           <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="employee01"
             required
             style={{
               padding: "8px 12px",

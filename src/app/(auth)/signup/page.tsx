@@ -8,7 +8,9 @@ import { signup } from "@/services/auth";
 export default function SignupPage() {
   const router = useRouter();
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
+  const [deptId, setDeptId] = useState("");
+  const [role, setRole] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -18,8 +20,14 @@ export default function SignupPage() {
     setLoading(true);
     setError(null);
     try {
-      await signup({ name, email, password });
-      router.push("/");
+      await signup({
+        name,
+        username,
+        password,
+        role,
+        deptId: deptId || undefined,
+      });
+      router.push("/login");
     } catch (err: any) {
       setError(err?.message ?? "회원가입에 실패했습니다");
     } finally {
@@ -37,19 +45,44 @@ export default function SignupPage() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="홍길동"
+            required
             style={{ padding: "8px 12px", border: "1px solid #ddd", borderRadius: 8 }}
           />
         </label>
         <label style={{ display: "grid", gap: 6 }}>
-          <span>이메일</span>
+          <span>사용자 ID</span>
           <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="employee01"
             required
             style={{ padding: "8px 12px", border: "1px solid #ddd", borderRadius: 8 }}
           />
+        </label>
+        <label style={{ display: "grid", gap: 6 }}>
+          <span>부서 ID</span>
+          <input
+            value={deptId}
+            onChange={(e) => setDeptId(e.target.value)}
+            placeholder="CARDIO"
+            style={{ padding: "8px 12px", border: "1px solid #ddd", borderRadius: 8 }}
+          />
+        </label>
+        <label style={{ display: "grid", gap: 6 }}>
+          <span>직무</span>
+          <select
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+            required
+            style={{ padding: "8px 12px", border: "1px solid #ddd", borderRadius: 8 }}
+          >
+            <option value="" disabled>
+              직무를 선택하세요
+            </option>
+            <option value="DOCTOR">의사</option>
+            <option value="NURSE">간호사</option>
+            <option value="RECEPTIONIST">접수원</option>
+          </select>
         </label>
         <label style={{ display: "grid", gap: 6 }}>
           <span>비밀번호</span>

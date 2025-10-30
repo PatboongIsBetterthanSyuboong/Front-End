@@ -1,40 +1,50 @@
 import { post } from "./http/client";
-import { setAccessToken } from "@/lib/auth/token";
+import { clearTokens, getRefreshToken, setAccessToken, setRefreshToken } from "@/lib/auth/token";
 
 export interface LoginRequestBody {
-  email: string;
+  username: string;
   password: string;
+}
+
+export interface LoginResponseBody {
+  grantType: string;
+  accessToken: string;
+  refreshToken: string;
 }
 
 export interface SignupRequestBody {
-  email: string;
+  name: string;
+  deptId?: string;
+  role: string;
+  username: string;
   password: string;
-  name?: string;
 }
 
-export interface AuthResponseBody {
-  accessToken: string;
-  user?: {
-    id: string | number;
-    email: string;
-    name?: string;
-  };
+interface LogoutRequestBody {
+  refreshToken: string;
 }
 
-export async function login(body: LoginRequestBody): Promise<AuthResponseBody> {
-  const data = await post<AuthResponseBody, LoginRequestBody>("/auth/login", body);
+export async function login(body: LoginRequestBody): Promise<LoginResponseBody> {
+  const data = await post<LoginResponseBody, LoginRequestBody>("/api/user/login", body);
   setAccessToken(data.accessToken ?? null);
+  setRefreshToken(data.refreshToken ?? null);
   return data;
 }
 
-export async function signup(body: SignupRequestBody): Promise<AuthResponseBody> {
-  const data = await post<AuthResponseBody, SignupRequestBody>("/auth/signup", body);
-  setAccessToken(data.accessToken ?? null);
-  return data;
+export async function signup(body: SignupRequestBody): Promise<void> {
+  await post<void, SignupRequestBody>("/api/user/register", body);
 }
 
-export function logout(): void {
-  setAccessToken(null);
+export async function logout(): Promise<void> {
+  const refreshToken = getRefreshToken();
+
+  try {
+    if (refreshToken) {
+      await post<void, LogoutRequestBody>("/api/user/logout", { refreshToken });
+    }
+  } finally {
+    clearTokens();
+  }
 }
 
 
