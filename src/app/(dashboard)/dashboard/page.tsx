@@ -1,7 +1,10 @@
+"use client";
+
+import { useRef } from "react";
 import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
 import ActionBar from "@/components/ActionBar";
-import PatientForm from "@/components/PatientForm";
+import PatientForm, { PatientFormRef } from "@/components/PatientForm";
 import PatientStatus from "@/components/PatientStatus";
 import MedicalInfo from "@/components/MedicalInfo";
 import SpecialNote from "@/components/SpecialNote";
@@ -9,6 +12,12 @@ import HistoryDiagnose from "@/components/HistoryDiagnose";
 import styles from "./page.module.css";
 
 export default function DashboardPage() {
+  const patientFormRef = useRef<PatientFormRef>(null);
+
+  const handleRegisterPatient = () => {
+    patientFormRef.current?.registerPatient();
+  };
+
   return (
     <div className={styles.container}>
       <Header />
@@ -17,7 +26,7 @@ export default function DashboardPage() {
         <Sidebar />
 
         <main className={styles.mainContent}>
-          <ActionBar />
+          <ActionBar onRegisterPatient={handleRegisterPatient} />
 
           <div className={styles.contentArea}>
             <div className={styles.contentGrid}>
@@ -29,7 +38,7 @@ export default function DashboardPage() {
               
               {/* Middle Column - Patient Form */}
               <div className={styles.middleColumn}>
-                <PatientForm />
+                <PatientForm ref={patientFormRef} />
               </div>
               
               {/* Right Column - Patient Status & Medical Info */}
