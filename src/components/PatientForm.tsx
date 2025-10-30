@@ -1,9 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useImperativeHandle, forwardRef } from "react";
 import styles from "./PatientForm.module.css";
 
-export default function PatientForm() {
+export interface PatientFormRef {
+  registerPatient: () => void;
+}
+
+const PatientForm = forwardRef<PatientFormRef>((props, ref) => {
   const [formData, setFormData] = useState({
     name: "",
     birthDate: "",
@@ -23,7 +27,41 @@ export default function PatientForm() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     console.log("환자 정보:", formData);
+    alert("환자 정보가 등록되었습니다!");
+    // 폼 초기화
+    setFormData({
+      name: "",
+      birthDate: "",
+      phone: "",
+      address: "",
+      symptoms: "",
+      notes: ""
+    });
   };
+
+  const registerPatient = () => {
+    if (!formData.name || !formData.birthDate || !formData.phone) {
+      alert("필수 정보(환자명, 생년월일, 연락처)를 입력해주세요.");
+      return;
+    }
+    
+    console.log("접수등록 버튼으로 환자 등록:", formData);
+    alert(`${formData.name} 환자가 접수 등록되었습니다!`);
+    
+    // 폼 초기화
+    setFormData({
+      name: "",
+      birthDate: "",
+      phone: "",
+      address: "",
+      symptoms: "",
+      notes: ""
+    });
+  };
+
+  useImperativeHandle(ref, () => ({
+    registerPatient
+  }));
 
   return (
     <div className={styles.container}>
@@ -94,4 +132,8 @@ export default function PatientForm() {
       </form>
     </div>
   );
-}
+});
+
+PatientForm.displayName = "PatientForm";
+
+export default PatientForm;
