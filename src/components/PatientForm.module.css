@@ -74,4 +74,25 @@
 
 .submitButton:hover {
   background: #2563eb;
+}.titleR
+ow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.sampleButton {
+  padding: 6px 12px;
+  background-color: #10b981;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.sampleButton:hover {
+  background-color: #059669;
 }

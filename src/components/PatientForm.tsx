@@ -24,61 +24,86 @@ const PatientForm = forwardRef<PatientFormRef>((props, ref) => {
     gender: "M",
     address: "",
     symptoms: "",
-    notes: ""
+    notes: "",
   });
 
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    setFormData(prev => ({
+  const handleChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
+  ) => {
+    setFormData((prev) => ({
       ...prev,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
     }));
   };
 
-  const createPatient = async (patientData: PatientData): Promise<number | null> => {
+  const createPatient = async (
+    patientData: PatientData
+  ): Promise<number | null> => {
     try {
-      const response = await fetch('http://localhost:8080/api/patients/get_patient_id', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(patientData),
-      });
+      console.log("🚀 환자 등록 요청 시작:", patientData);
+
+      const response = await fetch(
+        "http://localhost:8080/api/patients/get_patient_id",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(patientData),
+        }
+      );
+
+      console.log("📡 응답 상태:", response.status);
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error("서버 오류 응답:", errorText);
+        throw new Error(
+          `HTTP error! status: ${response.status}, message: ${errorText}`
+        );
       }
 
       const result = await response.json();
+      console.log("✅ 환자 등록 성공:", result);
       return result.patientId;
     } catch (error) {
-      console.error('환자 등록 실패:', error);
+      console.error("환자 등록 실패:", error);
       throw error;
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!formData.name || !formData.birthDate || !formData.phone || !formData.identityNumber) {
-      alert("필수 정보(환자명, 생년월일, 연락처, 주민등록번호)를 입력해주세요.");
+
+    if (
+      !formData.name ||
+      !formData.birthDate ||
+      !formData.phone ||
+      !formData.identityNumber
+    ) {
+      alert(
+        "필수 정보(환자명, 생년월일, 연락처, 주민등록번호)를 입력해주세요."
+      );
       return;
     }
 
     setIsLoading(true);
-    
+
     try {
       const patientData: PatientData = {
         name: formData.name,
         phoneNumber: formData.phone,
         identityNumber: formData.identityNumber,
         birth: formData.birthDate,
-        gender: formData.gender
+        gender: formData.gender,
       };
 
       const patientId = await createPatient(patientData);
-      
+
       if (patientId) {
         alert(`환자 정보가 등록되었습니다! (환자 ID: ${patientId})`);
         // 폼 초기화
@@ -90,7 +115,7 @@ const PatientForm = forwardRef<PatientFormRef>((props, ref) => {
           gender: "M",
           address: "",
           symptoms: "",
-          notes: ""
+          notes: "",
         });
       }
     } catch (error) {
@@ -101,26 +126,35 @@ const PatientForm = forwardRef<PatientFormRef>((props, ref) => {
   };
 
   const registerPatient = async () => {
-    if (!formData.name || !formData.birthDate || !formData.phone || !formData.identityNumber) {
-      alert("필수 정보(환자명, 생년월일, 연락처, 주민등록번호)를 입력해주세요.");
+    if (
+      !formData.name ||
+      !formData.birthDate ||
+      !formData.phone ||
+      !formData.identityNumber
+    ) {
+      alert(
+        "필수 정보(환자명, 생년월일, 연락처, 주민등록번호)를 입력해주세요."
+      );
       return;
     }
-    
+
     setIsLoading(true);
-    
+
     try {
       const patientData: PatientData = {
         name: formData.name,
         phoneNumber: formData.phone,
         identityNumber: formData.identityNumber,
         birth: formData.birthDate,
-        gender: formData.gender
+        gender: formData.gender,
       };
 
       const patientId = await createPatient(patientData);
-      
+
       if (patientId) {
-        alert(`${formData.name} 환자가 접수 등록되었습니다! (환자 ID: ${patientId})`);
+        alert(
+          `${formData.name} 환자가 접수 등록되었습니다! (환자 ID: ${patientId})`
+        );
         // 폼 초기화
         setFormData({
           name: "",
@@ -130,7 +164,7 @@ const PatientForm = forwardRef<PatientFormRef>((props, ref) => {
           gender: "M",
           address: "",
           symptoms: "",
-          notes: ""
+          notes: "",
         });
       }
     } catch (error) {
@@ -141,13 +175,35 @@ const PatientForm = forwardRef<PatientFormRef>((props, ref) => {
   };
 
   useImperativeHandle(ref, () => ({
-    registerPatient
+    registerPatient,
   }));
+
+  const fillSampleData = () => {
+    setFormData({
+      name: "김철수",
+      birthDate: "1990-01-01",
+      phone: "010-1234-5678",
+      identityNumber: "900101-1234567",
+      gender: "M",
+      address: "서울시 강남구 테헤란로 123",
+      symptoms: "두통, 발열",
+      notes: "테스트용 환자 데이터",
+    });
+  };
 
   return (
     <div className={styles.container}>
-      <h3 className={styles.title}>환자 정보 입력</h3>
-      
+      <div className={styles.titleRow}>
+        <h3 className={styles.title}>환자 정보 입력</h3>
+        <button
+          type="button"
+          onClick={fillSampleData}
+          className={styles.sampleButton}
+        >
+          샘플 데이터
+        </button>
+      </div>
+
       <form onSubmit={handleSubmit} className={styles.form}>
         <div className={styles.row}>
           <label className={styles.field}>
@@ -161,7 +217,7 @@ const PatientForm = forwardRef<PatientFormRef>((props, ref) => {
               required
             />
           </label>
-          
+
           <label className={styles.field}>
             <span className={styles.label}>생년월일 *</span>
             <input
@@ -174,7 +230,7 @@ const PatientForm = forwardRef<PatientFormRef>((props, ref) => {
             />
           </label>
         </div>
-        
+
         <div className={styles.row}>
           <label className={styles.field}>
             <span className={styles.label}>연락처 *</span>
@@ -188,7 +244,7 @@ const PatientForm = forwardRef<PatientFormRef>((props, ref) => {
               required
             />
           </label>
-          
+
           <label className={styles.field}>
             <span className={styles.label}>성별 *</span>
             <select
@@ -203,7 +259,7 @@ const PatientForm = forwardRef<PatientFormRef>((props, ref) => {
             </select>
           </label>
         </div>
-        
+
         <label className={styles.field}>
           <span className={styles.label}>주민등록번호 *</span>
           <input
@@ -216,7 +272,7 @@ const PatientForm = forwardRef<PatientFormRef>((props, ref) => {
             required
           />
         </label>
-        
+
         <label className={styles.field}>
           <span className={styles.label}>주소</span>
           <input
@@ -227,7 +283,7 @@ const PatientForm = forwardRef<PatientFormRef>((props, ref) => {
             className={styles.input}
           />
         </label>
-        
+
         <label className={styles.field}>
           <span className={styles.label}>증상</span>
           <textarea
@@ -238,9 +294,9 @@ const PatientForm = forwardRef<PatientFormRef>((props, ref) => {
             className={styles.textarea}
           />
         </label>
-        
-        <button 
-          type="submit" 
+
+        <button
+          type="submit"
           className={styles.submitButton}
           disabled={isLoading}
         >
