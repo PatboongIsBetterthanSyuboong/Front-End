@@ -28,6 +28,19 @@
   height: 100%;
 }
 
+.contentGridClinic {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 16px;
+  height: 100%;
+}
+
+.clinicRightColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
 .leftColumn {
   display: flex;
   flex-direction: column;
@@ -42,4 +55,8 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+.verticalComponent {
+  flex: 1;
 }

@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import styles from "./PatientStatus.module.css";
+import styles from "./WaitingStatus.module.css";
 
-export default function PatientStatus() {
+export default function WaitingStatus() {
   const [selectedStatus, setSelectedStatus] = useState("대기");
 
   const statusData = [
