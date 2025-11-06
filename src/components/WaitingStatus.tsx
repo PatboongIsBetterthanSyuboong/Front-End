@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import styles from "./WaitingStatus.module.css";
+import { getAccessToken } from "@/lib/auth/token";
 
 interface WaitingPatient {
   id: number;
@@ -27,6 +28,8 @@ export default function WaitingStatus() {
   const [waitingList, setWaitingList] = useState<WaitingPatient[]>([]);
   const [patientInfoMap, setPatientInfoMap] = useState<Map<number, PatientInfo>>(new Map());
   const [isLoading, setIsLoading] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; patientId: number } | null>(null);
+  const contextMenuRef = useRef<HTMLDivElement>(null);
 
   // 대기 목록 가져오기
   const fetchWaitingList = async () => {
@@ -176,6 +179,76 @@ export default function WaitingStatus() {
     }
   };
 
+  // 컨텍스트 메뉴 열기
+  const handleContextMenu = (e: React.MouseEvent, patientId: number) => {
+    e.preventDefault();
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      patientId: patientId,
+    });
+  };
+
+  // 컨텍스트 메뉴 닫기
+  const closeContextMenu = () => {
+    setContextMenu(null);
+  };
+
+  // 컨텍스트 메뉴 외부 클릭 시 닫기
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (contextMenuRef.current && !contextMenuRef.current.contains(event.target as Node)) {
+        closeContextMenu();
+      }
+    };
+
+    if (contextMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+      };
+    }
+  }, [contextMenu]);
+
+  // 상태 변경 함수
+  const updatePatientStatus = async (patientId: number, newState: "hold" | "completed") => {
+    try {
+      let apiUrl = "";
+      if (newState === "completed") {
+        // 진료 완료 API 호출
+        apiUrl = `http://localhost:8080/api/waiting/${patientId}/complete`;
+      } else if (newState === "hold") {
+        // 진료 보류 API 호출
+        apiUrl = `http://localhost:8080/api/waiting/${patientId}/hold`;
+      }
+
+      const token = getAccessToken();
+      const headers: HeadersInit = {
+        "Content-Type": "application/json",
+      };
+
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(apiUrl, {
+        method: "PUT",
+        headers,
+      });
+
+      if (!response.ok) {
+        throw new Error(`상태 변경 실패: ${response.status}`);
+      }
+
+      closeContextMenu();
+      // 목록 새로고침
+      await fetchWaitingList();
+    } catch (error) {
+      console.error("상태 변경 실패:", error);
+      alert("상태 변경에 실패했습니다.");
+    }
+  };
+
   return (
     <div className={styles.container}>
       <div className={styles.titleRow}>
@@ -235,7 +308,11 @@ export default function WaitingStatus() {
                     <tr key={patient.id} className={styles.tableRow}>
                       <td className={styles.patientNumber}>{patient.patientId}</td>
                       <td className={styles.entryTime}>{formatTime(patient.entryDate)}</td>
-                      <td className={styles.patientName}>
+                      <td 
+                        className={styles.patientName}
+                        onContextMenu={(e) => handleContextMenu(e, patient.patientId)}
+                        style={{ cursor: "context-menu" }}
+                      >
                         {patientInfo?.name || `환자 ${patient.patientId}`}
                       </td>
                       <td className={styles.gender}>
@@ -261,6 +338,33 @@ export default function WaitingStatus() {
           </div>
         )}
       </div>
+
+      {/* 컨텍스트 메뉴 */}
+      {contextMenu && (
+        <div
+          ref={contextMenuRef}
+          className={styles.contextMenu}
+          style={{
+            position: "fixed",
+            left: `${contextMenu.x}px`,
+            top: `${contextMenu.y}px`,
+            zIndex: 1000,
+          }}
+        >
+          <button
+            className={styles.contextMenuItem}
+            onClick={() => updatePatientStatus(contextMenu.patientId, "hold")}
+          >
+            진료 보류 변경
+          </button>
+          <button
+            className={styles.contextMenuItem}
+            onClick={() => updatePatientStatus(contextMenu.patientId, "completed")}
+          >
+            진료 완료 변경
+          </button>
+        </div>
+      )}
     </div>
   );
 }
