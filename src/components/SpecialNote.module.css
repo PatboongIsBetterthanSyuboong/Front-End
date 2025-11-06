@@ -1,17 +1,30 @@
 .container {
   background: #444444;
-  color: white;
-  padding: 16px;
   border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   margin-bottom: 16px;
   border: 1px solid #e2e8f0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
-.title {
-  margin: 0 0 12px 0;
-  font-size: 14px;
+.header {
+  padding: 16px 20px;
+  background-color: #333336;
+  border-radius: 8px 8px 0 0;
+}
+
+.header h3 {
+  margin: 0;
+  font-size: 16px;
   font-weight: 600;
-  color: white;
+}
+
+.content {
+  padding: 20px;
+  flex: 1;
+  overflow-y: auto;
 }
 
 .notesList {

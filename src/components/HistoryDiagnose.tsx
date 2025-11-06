@@ -56,9 +56,11 @@ export default function HistoryDiagnose() {
 
   return (
     <div className={styles.container}>
-      <h3 className={styles.title}>과거처방</h3>
-      
-      {/* 날짜 선택 */}
+      <div className={styles.header}>
+        <h3>과거처방</h3>
+      </div>
+      <div className={styles.content}>
+        {/* 날짜 선택 */}
       <div className={styles.dateSection}>
         <div className={styles.dateInputs}>
           <input
@@ -142,6 +144,7 @@ export default function HistoryDiagnose() {
             </div>
           </div>
         ))}
+      </div>
       </div>
     </div>
   );

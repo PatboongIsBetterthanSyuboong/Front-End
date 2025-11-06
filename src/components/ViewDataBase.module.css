@@ -109,7 +109,7 @@
   overflow-y: auto;
   border: 1px solid #e5e7eb;
   border-radius: 4px;
-  background: #262626;
+  background: #3B3B3B;
 }
 
 .resultItem {
@@ -122,7 +122,7 @@
 }
 
 .resultItem:hover {
-  background-color: #f9fafb;
+  background-color: #535353;
 }
 
 .resultItem:last-child {

@@ -251,8 +251,8 @@ export default function WaitingStatus() {
 
   return (
     <div className={styles.container}>
-      <div className={styles.titleRow}>
-        <h3 className={styles.title}>진료 현황</h3>
+      <div className={styles.header}>
+        <h3>진료 현황</h3>
         <button 
           onClick={fetchWaitingList}
           className={styles.refreshButton}
@@ -261,6 +261,7 @@ export default function WaitingStatus() {
           {isLoading ? "새로고침 중..." : "새로고침"}
         </button>
       </div>
+      <div className={styles.content}>
 
       {/* 상태 요약 */}
       <div className={styles.statusGrid}>
@@ -365,6 +366,7 @@ export default function WaitingStatus() {
           </button>
         </div>
       )}
+      </div>
     </div>
   );
 }

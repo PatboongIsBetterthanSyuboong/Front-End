@@ -9,14 +9,17 @@ export default function SpecialNote() {
 
   return (
     <div className={styles.container}>
-      <h3 className={styles.title}>특이사항</h3>
-      
-      <div className={styles.notesList}>
-        {specialNotes.map((note, index) => (
-          <div key={index} className={styles.noteItem}>
-            {note}
-          </div>
-        ))}
+      <div className={styles.header}>
+        <h3>특이사항</h3>
+      </div>
+      <div className={styles.content}>
+        <div className={styles.notesList}>
+          {specialNotes.map((note, index) => (
+            <div key={index} className={styles.noteItem}>
+              {note}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

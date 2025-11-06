@@ -29,9 +29,11 @@ export default function MedicalInfo() {
 
   return (
     <div className={styles.container}>
-      <h3 className={styles.title}>진료정보</h3>
-
-      <form className={styles.form}>
+      <div className={styles.header}>
+        <h3>진료정보</h3>
+      </div>
+      <div className={styles.content}>
+        <form className={styles.form}>
         <div className={styles.row}>
           <div className={styles.field}>
             <label className={styles.label}>
@@ -161,6 +163,7 @@ export default function MedicalInfo() {
           />
         </div>
       </form>
+      </div>
     </div>
   );
 }

@@ -194,8 +194,8 @@ export default function PatientForm() {
 
   return (
     <div className={styles.container}>
-      <div className={styles.titleRow}>
-        <h3 className={styles.title}>환자 정보 입력</h3>
+      <div className={styles.header}>
+        <h3>환자 정보 입력</h3>
         <button
           type="button"
           onClick={fillSampleData}
@@ -204,8 +204,8 @@ export default function PatientForm() {
           샘플 데이터
         </button>
       </div>
-
-      <form onSubmit={handleSubmit} className={styles.form}>
+      <div className={styles.content}>
+        <form onSubmit={handleSubmit} className={styles.form}>
         <div className={styles.row}>
           <label className={styles.field}>
             <span className={styles.label}>환자명 *</span>
@@ -304,6 +304,7 @@ export default function PatientForm() {
           {isLoading ? "등록 중..." : "환자 등록"}
         </button>
       </form>
+      </div>
     </div>
   );
 }
