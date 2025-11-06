@@ -11,6 +11,9 @@ import SpecialNote from "@/components/SpecialNote";
 import HistoryDiagnose from "@/components/HistoryDiagnose";
 import Diagnosis from "@/components/Diagnosis";
 import Disease from "@/components/Disease";
+import ViewDataBase from "@/components/ViewDataBase";
+import AIReport from "@/components/AIReport";
+import Calender from "@/components/Calender";
 import styles from "./page.module.css";
 
 export default function DashboardPage() {
@@ -45,23 +48,25 @@ export default function DashboardPage() {
     } else if (activeMenu === "진료실") {
       return (
         <div className={styles.contentGridClinic}>
-          {/* Left Column - Special Notes & History */}
+          {/* Left Column - Calendar & History */}
           <div className={styles.leftColumn}>
-            <SpecialNote />
+            <Calender />
             <HistoryDiagnose />
           </div>
 
-          {/* Right Column - Vertical Layout for Clinic Components */}
-          <div className={styles.clinicRightColumn}>
+          {/* Middle Column - Vertical Layout for Clinic Components */}
+          <div className={styles.clinicMiddleColumn}>
             <div className={styles.verticalComponent}>
               <WaitingStatus />
             </div>
-            <div className={styles.verticalComponent}>
-              <Diagnosis />
-            </div>
-            <div className={styles.verticalComponent}>
               <Disease />
-            </div>
+              <Diagnosis />
+          </div>
+
+          {/* Right Column - ViewDataBase & AIReport */}
+          <div className={styles.clinicRightColumn}>
+            <ViewDataBase />
+            <AIReport />
           </div>
         </div>
       );

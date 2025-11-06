@@ -4,7 +4,7 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   margin-bottom: 16px;
   border: 1px solid #e5e7eb;
-  height: 100%;
+  height: 50%;
 }
 
 .header {
@@ -23,77 +23,101 @@
   padding: 20px;
 }
 
-.diseaseSection {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+/* 테이블 스타일 */
+.tableContainer {
+  overflow-x: auto;
+  border-radius: 8px;
+  border: 1px solid #374151;
 }
 
-.searchSection {
-  display: flex;
-  gap: 8px;
-}
-
-.searchInput {
-  flex: 1;
-  padding: 8px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 4px;
-  font-size: 14px;
-}
-
-.searchInput:focus {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-.searchButton {
-  padding: 8px 16px;
-  background-color: #3b82f6;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.searchButton:hover {
-  background-color: #2563eb;
-}
-
-.diseaseList {
-  max-height: 200px;
-  overflow-y: auto;
-  border: 1px solid #e5e7eb;
-  border-radius: 4px;
-}
-
-.diseaseItem {
-  display: flex;
+.diseaseTable {
+  width: 100%;
+  border-collapse: collapse;
+  background: #2f2f2f;
   align-items: center;
-  padding: 12px;
-  border-bottom: 1px solid #f3f4f6;
-  cursor: pointer;
+}
+
+.tableHeader {
+  background: #1f2937;
+}
+
+.tableHeader th {
+  padding: 12px 8px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 14px;
+  color: #e5e7eb;
+  border-bottom: 2px solid #374151;
+  border-right: 1px solid #374151;
+}
+
+.tableHeader th:last-child {
+  border-right: none;
+}
+
+.tableRow {
   transition: background-color 0.2s;
 }
 
-.diseaseItem:hover {
-  background-color: #f9fafb;
+.tableRow:hover {
+  background: #374151;
 }
 
-.diseaseItem:last-child {
-  border-bottom: none;
+.tableRow:nth-child(even) {
+  background: #262626;
 }
 
-.diseaseCode {
+.tableRow:nth-child(even):hover {
+  background: #374151;
+}
+
+.tableRow td {
+  padding: 10px 8px;
+  font-size: 13px;
+  color: #e5e7eb;
+  text-align: center;
+  border-bottom: 1px solid #374151;
+  border-right: 1px solid #374151;
+}
+
+.tableRow td:last-child {
+  border-right: none;
+}
+
+.patientNumber {
   font-weight: 600;
-  color: #E8C508;
-  min-width: 80px;
-  margin-right: 12px;
+  color: #60a5fa !important;
+  width: 80px;
 }
 
-.diseaseName {
-  flex: 1;
+.entryTime {
+  color: #9ca3af !important;
+  text-align: center;
+  width: 80px;
 }
+
+.patientName {
+  font-weight: 500;
+  color: #f3f4f6 !important;
+  min-width: 80px;
+}
+
+.gender {
+  text-align: center;
+  width: 50px;
+  color: #d1d5db !important;
+}
+
+.birthDate {
+  color: #9ca3af !important;
+  text-align: center;
+  width: 100px;
+}
+
+.department {
+  color: #34d399 !important;
+  font-weight: 500;
+  text-align: center;
+  width: 80px;
+}
+

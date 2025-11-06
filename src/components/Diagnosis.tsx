@@ -9,19 +9,30 @@ export default function Diagnosis() {
         <h3>처방</h3>
       </div>
       <div className={styles.content}>
-        <div className={styles.diagnosisSection}>
-          <div className={styles.inputGroup}>
-            <label>주상병</label>
-            <input type="text" placeholder="주상병을 입력하세요" />
-          </div>
-          <div className={styles.inputGroup}>
-            <label>부상병</label>
-            <input type="text" placeholder="부상병을 입력하세요" />
-          </div>
-          <div className={styles.inputGroup}>
-            <label>진단 메모</label>
-            <textarea placeholder="진단 관련 메모를 입력하세요" rows={4}></textarea>
-          </div>
+      <div className={styles.tableContainer}>
+          <table className={styles.diseaseTable}>
+            <thead>
+              <tr className={styles.tableHeader}>
+                <th>주상병</th>
+                <th>상병코드</th>
+                <th>상병명칭</th>
+                <th>구분(?)</th>
+                <th>과목</th>
+                <th>수술</th>
+              </tr>
+            </thead>
+            <tbody>
+              {/* className 이름 변경 필요 */}
+              <tr className={styles.tableRow}>
+                <td className={styles.patientNumber}></td>
+                <td className={styles.entryTime}>A005</td>
+                <td className={styles.patientName}>콜레라</td>
+                <td className={styles.gender}>1</td>
+                <td className={styles.birthDate}>05</td>
+                <td className={styles.department}>O</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
