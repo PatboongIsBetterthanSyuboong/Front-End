@@ -11,6 +11,13 @@
   font-weight: 600;
 }
 
+.titleRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
 .form {
   display: grid;
   gap: 12px;

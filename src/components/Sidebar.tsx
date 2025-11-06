@@ -9,8 +9,8 @@ interface SidebarProps {
 
 export default function Sidebar({ activeMenu, onMenuChange }: SidebarProps) {
   const menuItems = [
-    { id: "환자접수", label: "환자 접수"},
-    { id: "진료실", label: "진료실"}
+    { id: "환자접수", label: "환자 접수", shortLabel: "접수"},
+    { id: "진료실", label: "진료실", shortLabel: "진료"}
   ];
 
   return (
@@ -21,8 +21,10 @@ export default function Sidebar({ activeMenu, onMenuChange }: SidebarProps) {
             key={item.id}
             onClick={() => onMenuChange(item.id)}
             className={`${styles.menuItem} ${activeMenu === item.id ? styles.active : ""}`}
+            title={item.label}
           >
-            {item.label}
+            <span className={styles.fullLabel}>{item.label}</span>
+            <span className={styles.shortLabel}>{item.shortLabel}</span>
           </button>
         ))}
       </nav>

@@ -1,40 +1,193 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import styles from "./WaitingStatus.module.css";
 
+interface WaitingPatient {
+  id: number;
+  patientId: number;
+  deptId: number;
+  symptom: string;
+  entryDate: string;
+  state: string;
+  patientName?: string;
+}
+
+interface PatientInfo {
+  id: number;
+  name: string;
+  phoneNumber: string;
+  identityNumber: string;
+  birth: string;
+  gender: string;
+}
+
 export default function WaitingStatus() {
-  const [selectedStatus, setSelectedStatus] = useState("대기");
+  const [selectedStatus, setSelectedStatus] = useState("waiting");
+  const [waitingList, setWaitingList] = useState<WaitingPatient[]>([]);
+  const [patientInfoMap, setPatientInfoMap] = useState<Map<number, PatientInfo>>(new Map());
+  const [isLoading, setIsLoading] = useState(false);
 
+  // 대기 목록 가져오기
+  const fetchWaitingList = async () => {
+    try {
+      setIsLoading(true);
+      console.log("대기 목록 조회 시작");
+
+      const response = await fetch("http://localhost:8080/api/waiting/get_list");
+      
+      if (!response.ok) {
+        throw new Error(`대기 목록 조회 실패: ${response.status}`);
+      }
+
+      const data: WaitingPatient[] = await response.json();
+      console.log("대기 목록 조회 성공:", data);
+      
+      setWaitingList(data);
+      
+      // 환자 정보도 함께 가져오기
+      await fetchPatientInfos(data);
+      
+    } catch (error) {
+      console.error("대기 목록 조회 실패:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 환자 정보 가져오기
+  const fetchPatientInfos = async (waitingData: WaitingPatient[]) => {
+    const patientIds = [...new Set(waitingData.map(w => w.patientId))];
+    const patientMap = new Map<number, PatientInfo>();
+
+    for (const patientId of patientIds) {
+      try {
+        const response = await fetch(`http://localhost:8080/api/patients/search_patient/${patientId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
+        
+        if (response.ok) {
+          const patientInfo: PatientInfo = await response.json();
+          patientMap.set(patientId, patientInfo);
+        }
+      } catch (error) {
+        console.error(`환자 정보 조회 실패 (ID: ${patientId}):`, error);
+      }
+    }
+
+    setPatientInfoMap(patientMap);
+  };
+
+  // 컴포넌트 마운트 시 데이터 로드
+  useEffect(() => {
+    fetchWaitingList();
+  }, []);
+
+  // 상태별 환자 수 계산
+  const getStatusCounts = () => {
+    const counts = {
+      waiting: waitingList.filter(p => p.state === "waiting").length,
+      hold: waitingList.filter(p => p.state === "hold").length,
+      completed: waitingList.filter(p => p.state === "completed").length,
+    };
+    return counts;
+  };
+
+  const statusCounts = getStatusCounts();
+  
   const statusData = [
-    { status: "진료 대기", count: 5, type: "waiting", filterStatus: "대기" },
-    { status: "진료 보류", count: 2, type: "hold", filterStatus: "보류" },
-    { status: "진료 완료", count: 12, type: "completed", filterStatus: "완료" },
-  ];
-
-  const allPatients = [
-    { id: 1, name: "김철수", time: "09:30", status: "대기", type: "waiting" },
-    { id: 2, name: "이영희", time: "10:00", status: "대기", type: "waiting" },
-    { id: 3, name: "박민수", time: "10:30", status: "보류", type: "hold" },
-    { id: 4, name: "최영수", time: "11:00", status: "대기", type: "waiting" },
-    { id: 5, name: "정미영", time: "11:30", status: "완료", type: "completed" },
-    { id: 6, name: "홍길동", time: "12:00", status: "완료", type: "completed" },
-    { id: 7, name: "김영희", time: "12:30", status: "보류", type: "hold" },
-    { id: 8, name: "박철민", time: "13:00", status: "대기", type: "waiting" },
-    { id: 9, name: "이수진", time: "13:30", status: "대기", type: "waiting" },
+    { status: "진료 대기", count: statusCounts.waiting, type: "waiting", filterStatus: "waiting" },
+    { status: "진료 보류", count: statusCounts.hold, type: "hold", filterStatus: "hold" },
+    { status: "진료 완료", count: statusCounts.completed, type: "completed", filterStatus: "completed" },
   ];
 
   const handleStatusClick = (filterStatus: string) => {
     setSelectedStatus(filterStatus);
   };
 
-  const filteredPatients = allPatients.filter(
-    (patient) => patient.status === selectedStatus
+  // 선택된 상태에 따른 환자 필터링
+  const filteredPatients = waitingList.filter(
+    (patient) => patient.state === selectedStatus
   );
+
+  // 시간 포맷팅 함수
+  const formatTime = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleTimeString("ko-KR", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      });
+    } catch {
+      return "시간 미상";
+    }
+  };
+
+  // 생년월일 포맷팅 함수
+  const formatBirthDate = (birthString: string) => {
+    try {
+      const date = new Date(birthString);
+      return date.toLocaleDateString("ko-KR", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).replace(/\./g, '-').replace(/ /g, '').slice(0, -1);
+    } catch {
+      return "-";
+    }
+  };
+
+  // 진료과 이름 가져오기
+  const getDepartmentName = (deptId: number) => {
+    const departments: { [key: number]: string } = {
+      1: "내과",
+      2: "외과", 
+      3: "소아과",
+      4: "산부인과",
+      5: "정형외과",
+      6: "피부과",
+      7: "안과",
+      8: "이비인후과",
+    };
+    return departments[deptId] || "일반진료";
+  };
+
+  // 상태 한글 변환
+  const getStatusLabel = (state: string) => {
+    switch (state) {
+      case "waiting": return "대기";
+      case "hold": return "보류";
+      case "completed": return "완료";
+      default: return state;
+    }
+  };
+
+  // 상태별 제목
+  const getSectionTitle = () => {
+    switch (selectedStatus) {
+      case "waiting": return "대기 환자";
+      case "hold": return "보류 환자";
+      case "completed": return "완료 환자";
+      default: return "환자 목록";
+    }
+  };
 
   return (
     <div className={styles.container}>
-      <h3 className={styles.title}>진료 현황</h3>
+      <div className={styles.titleRow}>
+        <h3 className={styles.title}>진료 현황</h3>
+        <button 
+          onClick={fetchWaitingList}
+          className={styles.refreshButton}
+          disabled={isLoading}
+        >
+          {isLoading ? "새로고침 중..." : "새로고침"}
+        </button>
+      </div>
 
       {/* 상태 요약 */}
       <div className={styles.statusGrid}>
@@ -54,35 +207,57 @@ export default function WaitingStatus() {
         ))}
       </div>
 
-      {/* 필터링된 환자 목록 */}
+      {/* 환자 목록 테이블 */}
       <div>
         <h4 className={styles.sectionTitle}>
-          {selectedStatus === "대기"
-            ? "대기 환자"
-            : selectedStatus === "보류"
-            ? "보류 환자"
-            : "완료 환자"}
-          ({filteredPatients.length}명)
+          {getSectionTitle()} ({filteredPatients.length}명)
         </h4>
-        <div className={styles.patientList}>
-          {filteredPatients.map((patient) => (
-            <div key={patient.id} className={styles.patientItem}>
-              <span>{patient.name}</span>
-              <div className={styles.patientInfo}>
-                <span className={styles.patientTime}>{patient.time}</span>
-                <span
-                  className={`${styles.statusBadge} ${styles[patient.type]}`}
-                >
-                  {patient.status}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
+        
+        {isLoading ? (
+          <div className={styles.loadingMessage}>데이터를 불러오는 중...</div>
+        ) : (
+          <div className={styles.tableContainer}>
+            <table className={styles.patientTable}>
+              <thead>
+                <tr className={styles.tableHeader}>
+                  <th>환자 번호</th>
+                  <th>접수시간</th>
+                  <th>환자명</th>
+                  <th>성별</th>
+                  <th>생년월일</th>
+                  <th>진료과</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredPatients.map((patient) => {
+                  const patientInfo = patientInfoMap.get(patient.patientId);
+                  return (
+                    <tr key={patient.id} className={styles.tableRow}>
+                      <td className={styles.patientNumber}>{patient.patientId}</td>
+                      <td className={styles.entryTime}>{formatTime(patient.entryDate)}</td>
+                      <td className={styles.patientName}>
+                        {patientInfo?.name || `환자 ${patient.patientId}`}
+                      </td>
+                      <td className={styles.gender}>
+                        {patientInfo?.gender === 'M' ? '남' : patientInfo?.gender === 'F' ? '여' : '-'}
+                      </td>
+                      <td className={styles.birthDate}>
+                        {patientInfo?.birth ? formatBirthDate(patientInfo.birth) : '-'}
+                      </td>
+                      <td className={styles.department}>
+                        {getDepartmentName(patient.deptId)}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
 
-        {filteredPatients.length === 0 && (
+        {!isLoading && filteredPatients.length === 0 && (
           <div className={styles.emptyMessage}>
-            {selectedStatus} 상태의 환자가 없습니다.
+            {getSectionTitle()}가 없습니다.
           </div>
         )}
       </div>

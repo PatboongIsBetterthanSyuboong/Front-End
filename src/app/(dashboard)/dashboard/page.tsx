@@ -1,10 +1,10 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
 import ActionBar from "@/components/ActionBar";
-import PatientForm, { PatientFormRef } from "@/components/PatientForm";
+import PatientForm from "@/components/PatientForm";
 import WaitingStatus from "@/components/WaitingStatus";
 import MedicalInfo from "@/components/MedicalInfo";
 import SpecialNote from "@/components/SpecialNote";
@@ -14,12 +14,7 @@ import Disease from "@/components/Disease";
 import styles from "./page.module.css";
 
 export default function DashboardPage() {
-  const patientFormRef = useRef<PatientFormRef>(null);
   const [activeMenu, setActiveMenu] = useState("환자접수");
-
-  const handleRegisterPatient = () => {
-    patientFormRef.current?.registerPatient();
-  };
 
   const handleMenuChange = (menuId: string) => {
     setActiveMenu(menuId);
@@ -37,7 +32,7 @@ export default function DashboardPage() {
 
           {/* Middle Column - Patient Form */}
           <div className={styles.middleColumn}>
-            <PatientForm ref={patientFormRef} />
+            <PatientForm />
           </div>
 
           {/* Right Column - Waiting Status & Medical Info */}
@@ -81,7 +76,7 @@ export default function DashboardPage() {
         <Sidebar activeMenu={activeMenu} onMenuChange={handleMenuChange} />
 
         <main className={styles.mainContent}>
-          <ActionBar onRegisterPatient={handleRegisterPatient} />
+          <ActionBar />
 
           <div className={styles.contentArea}>{renderContent()}</div>
         </main>

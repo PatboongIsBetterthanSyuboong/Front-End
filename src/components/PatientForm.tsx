@@ -1,11 +1,7 @@
 "use client";
 
-import { useState, useImperativeHandle, forwardRef } from "react";
+import { useState } from "react";
 import styles from "./PatientForm.module.css";
-
-export interface PatientFormRef {
-  registerPatient: () => void;
-}
 
 interface PatientData {
   name: string;
@@ -15,7 +11,7 @@ interface PatientData {
   gender: string;
 }
 
-const PatientForm = forwardRef<PatientFormRef>((props, ref) => {
+export default function PatientForm() {
   const [formData, setFormData] = useState({
     name: "",
     birthDate: "",
@@ -44,7 +40,7 @@ const PatientForm = forwardRef<PatientFormRef>((props, ref) => {
     patientData: PatientData
   ): Promise<number | null> => {
     try {
-      console.log("🚀 환자 등록 요청 시작:", patientData);
+      console.log("환자 등록 요청 시작:", patientData);
 
       const response = await fetch(
         "http://localhost:8080/api/patients/get_patient_id",
@@ -57,7 +53,7 @@ const PatientForm = forwardRef<PatientFormRef>((props, ref) => {
         }
       );
 
-      console.log("📡 응답 상태:", response.status);
+      console.log("응답 상태:", response.status);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -68,7 +64,7 @@ const PatientForm = forwardRef<PatientFormRef>((props, ref) => {
       }
 
       const result = await response.json();
-      console.log("✅ 환자 등록 성공:", result);
+      console.log("환자 등록 성공:", result);
       return result.patientId;
     } catch (error) {
       console.error("환자 등록 실패:", error);
@@ -76,9 +72,60 @@ const PatientForm = forwardRef<PatientFormRef>((props, ref) => {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // 폼 초기화 함수
+  const resetForm = () => {
+    setFormData({
+      name: "",
+      birthDate: "",
+      phone: "",
+      identityNumber: "",
+      gender: "M",
+      address: "",
+      symptoms: "",
+      notes: "",
+    });
+  };
 
+  // 대기 목록 등록 함수
+  const registerWaiting = async (patientId: number) => {
+    try {
+      console.log("대기 목록 등록 시작:", patientId);
+
+      const waitingData = {
+        patientId: patientId,
+        deptId: 1, // 기본 진료과 ID
+        symptom: formData.symptoms || "일반 진료",
+        state: "waiting"
+      };
+
+      const response = await fetch("http://localhost:8080/api/waiting/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(waitingData),
+      });
+
+      console.log("대기 등록 응답 상태:", response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("대기 등록 오류:", errorText);
+        console.error("요청 데이터:", waitingData);
+        throw new Error(`대기 등록 실패: ${response.status} - ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log("대기 등록 성공:", result);
+      return result;
+    } catch (error) {
+      console.error("대기 등록 실패:", error);
+      throw error;
+    }
+  };
+
+  // 환자 등록 로직
+  const submitPatientData = async (customMessage?: string) => {
     if (
       !formData.name ||
       !formData.birthDate ||
@@ -102,81 +149,35 @@ const PatientForm = forwardRef<PatientFormRef>((props, ref) => {
         gender: formData.gender,
       };
 
+      // 환자 등록
       const patientId = await createPatient(patientData);
 
       if (patientId) {
-        alert(`환자 정보가 등록되었습니다! (환자 ID: ${patientId})`);
-        // 폼 초기화
-        setFormData({
-          name: "",
-          birthDate: "",
-          phone: "",
-          identityNumber: "",
-          gender: "M",
-          address: "",
-          symptoms: "",
-          notes: "",
-        });
+        // 대기 목록 등록
+        try {
+          await registerWaiting(patientId);
+          const message = customMessage || `환자 정보가 등록되고 대기 목록에 추가되었습니다! (환자 ID: ${patientId})`;
+          alert(message);
+        } catch {
+          // 환자는 등록되었지만 대기 목록 등록 실패
+          const message = `환자 정보는 등록되었습니다 (환자 ID: ${patientId})\n하지만 대기 목록 등록에 실패했습니다.`;
+          alert(message);
+        }
+        resetForm();
       }
-    } catch (error) {
+    } catch {
       alert("환자 등록 중 오류가 발생했습니다. 다시 시도해주세요.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const registerPatient = async () => {
-    if (
-      !formData.name ||
-      !formData.birthDate ||
-      !formData.phone ||
-      !formData.identityNumber
-    ) {
-      alert(
-        "필수 정보(환자명, 생년월일, 연락처, 주민등록번호)를 입력해주세요."
-      );
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      const patientData: PatientData = {
-        name: formData.name,
-        phoneNumber: formData.phone,
-        identityNumber: formData.identityNumber,
-        birth: formData.birthDate,
-        gender: formData.gender,
-      };
-
-      const patientId = await createPatient(patientData);
-
-      if (patientId) {
-        alert(
-          `${formData.name} 환자가 접수 등록되었습니다! (환자 ID: ${patientId})`
-        );
-        // 폼 초기화
-        setFormData({
-          name: "",
-          birthDate: "",
-          phone: "",
-          identityNumber: "",
-          gender: "M",
-          address: "",
-          symptoms: "",
-          notes: "",
-        });
-      }
-    } catch (error) {
-      alert("환자 접수 등록 중 오류가 발생했습니다. 다시 시도해주세요.");
-    } finally {
-      setIsLoading(false);
-    }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await submitPatientData();
   };
 
-  useImperativeHandle(ref, () => ({
-    registerPatient,
-  }));
+
 
   const fillSampleData = () => {
     setFormData({
@@ -305,8 +306,4 @@ const PatientForm = forwardRef<PatientFormRef>((props, ref) => {
       </form>
     </div>
   );
-});
-
-PatientForm.displayName = "PatientForm";
-
-export default PatientForm;
+}

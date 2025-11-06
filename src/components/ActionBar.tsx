@@ -4,11 +4,7 @@ import { useState } from "react";
 import styles from "./ActionBar.module.css";
 import Modal from "./Modal";
 
-interface ActionBarProps {
-  onRegisterPatient: () => void;
-}
-
-export default function ActionBar({ onRegisterPatient }: ActionBarProps) {
+export default function ActionBar() {
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
 
   const today = new Date().toLocaleDateString("ko-KR", {
@@ -17,10 +13,6 @@ export default function ActionBar({ onRegisterPatient }: ActionBarProps) {
     day: "numeric",
     weekday: "long",
   });
-
-  const handleRegisterClick = () => {
-    onRegisterPatient();
-  };
 
   const handleSearchClick = () => {
     setIsSearchModalOpen(true);
@@ -39,12 +31,6 @@ export default function ActionBar({ onRegisterPatient }: ActionBarProps) {
 
         <div className={styles.rightSection}>
           <button
-            className={`${styles.button} ${styles.registerButton}`}
-            onClick={handleRegisterClick}
-          >
-            접수등록
-          </button>
-          <button
             className={`${styles.button} ${styles.searchButton}`}
             onClick={handleSearchClick}
           >
@@ -61,9 +47,7 @@ export default function ActionBar({ onRegisterPatient }: ActionBarProps) {
         <div>
           <p>환자 조회 기능입니다.</p>
           <p>여기에 환자 검색 폼이나 환자 목록이 표시됩니다.</p>
-          <p>현재는 간단한 텍스트만 표시하고 있습니다.</p>
           <br />
-          <p>추후 다음 기능들을 추가할 수 있습니다:</p>
           <ul>
             <li>환자명으로 검색</li>
             <li>생년월일로 검색</li>

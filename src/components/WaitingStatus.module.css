@@ -5,10 +5,38 @@
   border: 1px solid #e2e8f0;
 }
 
+.titleRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
 .title {
-  margin: 0 0 16px 0;
+  margin: 0;
   font-size: 16px;
   font-weight: 600;
+  color: white;
+}
+
+.refreshButton {
+  padding: 6px 12px;
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.refreshButton:hover {
+  background-color: #2563eb;
+}
+
+.refreshButton:disabled {
+  background-color: #9ca3af;
+  cursor: not-allowed;
 }
 
 .statusGrid {
@@ -94,6 +122,7 @@
   margin: 0 0 12px 0;
   font-size: 14px;
   font-weight: 600;
+  color: white;
 }
 
 .patientList {
@@ -109,6 +138,22 @@
   justify-content: space-between;
   align-items: center;
   font-size: 14px;
+}
+
+.patientMainInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.patientName {
+  font-weight: 600;
+  color: white;
+}
+
+.patientSymptom {
+  font-size: 12px;
+  color: #9ca3af;
 }
 
 .patientInfo {
@@ -148,4 +193,140 @@
   font-size: 14px;
   padding: 20px;
   font-style: italic;
+}
+
+.loadingMessage {
+  text-align: center;
+  color: #64748b;
+  font-size: 14px;
+  padding: 20px;
+  font-style: italic;
+}
+
+/* 테이블 스타일 */
+.tableContainer {
+  overflow-x: auto;
+  border-radius: 8px;
+  border: 1px solid #374151;
+}
+
+.patientTable {
+  width: 100%;
+  border-collapse: collapse;
+  background: #2f2f2f;
+  align-items: center;
+}
+
+.tableHeader {
+  background: #1f2937;
+}
+
+.tableHeader th {
+  padding: 12px 8px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 14px;
+  color: #e5e7eb;
+  border-bottom: 2px solid #374151;
+  border-right: 1px solid #374151;
+}
+
+.tableHeader th:last-child {
+  border-right: none;
+}
+
+.tableRow {
+  transition: background-color 0.2s;
+}
+
+.tableRow:hover {
+  background: #374151;
+}
+
+.tableRow:nth-child(even) {
+  background: #262626;
+}
+
+.tableRow:nth-child(even):hover {
+  background: #374151;
+}
+
+.tableRow td {
+  padding: 10px 8px;
+  font-size: 13px;
+  color: #e5e7eb;
+  text-align: center;
+  border-bottom: 1px solid #374151;
+  border-right: 1px solid #374151;
+}
+
+.tableRow td:last-child {
+  border-right: none;
+}
+
+.patientNumber {
+  font-weight: 600;
+  color: #60a5fa !important;
+  width: 80px;
+}
+
+.entryTime {
+  color: #9ca3af !important;
+  text-align: center;
+  width: 80px;
+}
+
+.patientName {
+  font-weight: 500;
+  color: #f3f4f6 !important;
+  min-width: 80px;
+}
+
+.gender {
+  text-align: center;
+  width: 50px;
+  color: #d1d5db !important;
+}
+
+.birthDate {
+  color: #9ca3af !important;
+  text-align: center;
+  width: 100px;
+}
+
+.department {
+  color: #34d399 !important;
+  font-weight: 500;
+  text-align: center;
+  width: 80px;
+}
+
+/* 상태 배지 테이블용 조정 */
+.tableRow .statusBadge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+/* 반응형 테이블 */
+@media (max-width: 768px) {
+  .tableContainer {
+    font-size: 12px;
+  }
+  
+  .tableHeader th,
+  .tableRow td {
+    padding: 8px 4px;
+  }
+  
+  .patientNumber,
+  .entryTime,
+  .gender,
+  .birthDate,
+  .department {
+    width: auto;
+    min-width: 60px;
+  }
 }
