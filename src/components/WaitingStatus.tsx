@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import styles from "./WaitingStatus.module.css";
 import { getAccessToken } from "@/lib/auth/token";
+import { PatientInfo } from "./PatientInfoBar";
 
 interface WaitingPatient {
   id: number;
@@ -14,7 +15,7 @@ interface WaitingPatient {
   patientName?: string;
 }
 
-interface PatientInfo {
+interface PatientDetail {
   id: number;
   name: string;
   phoneNumber: string;
@@ -23,10 +24,14 @@ interface PatientInfo {
   gender: string;
 }
 
-export default function WaitingStatus() {
+interface WaitingStatusProps {
+  onPatientSelect?: (patient: PatientInfo) => void;
+}
+
+export default function WaitingStatus({ onPatientSelect }: WaitingStatusProps = {}) {
   const [selectedStatus, setSelectedStatus] = useState("waiting");
   const [waitingList, setWaitingList] = useState<WaitingPatient[]>([]);
-  const [patientInfoMap, setPatientInfoMap] = useState<Map<number, PatientInfo>>(new Map());
+  const [patientInfoMap, setPatientInfoMap] = useState<Map<number, PatientDetail>>(new Map());
   const [isLoading, setIsLoading] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; patientId: number } | null>(null);
   const contextMenuRef = useRef<HTMLDivElement>(null);
@@ -61,7 +66,7 @@ export default function WaitingStatus() {
   // 환자 정보 가져오기
   const fetchPatientInfos = async (waitingData: WaitingPatient[]) => {
     const patientIds = [...new Set(waitingData.map(w => w.patientId))];
-    const patientMap = new Map<number, PatientInfo>();
+    const patientMap = new Map<number, PatientDetail>();
 
     for (const patientId of patientIds) {
       try {
@@ -73,7 +78,7 @@ export default function WaitingStatus() {
         });
         
         if (response.ok) {
-          const patientInfo: PatientInfo = await response.json();
+          const patientInfo: PatientDetail = await response.json();
           patientMap.set(patientId, patientInfo);
         }
       } catch (error) {
@@ -128,6 +133,65 @@ export default function WaitingStatus() {
     } catch {
       return "시간 미상";
     }
+  };
+
+  const formatDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return date
+        .toLocaleDateString("ko-KR", {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+        })
+        .replace(/\./g, "-")
+        .replace(/ /g, "")
+        .slice(0, -1);
+    } catch {
+      return "-";
+    }
+  };
+
+  const calculateAgeWithMonths = (birthString: string) => {
+    if (!birthString) return "-";
+    const birth = new Date(birthString);
+    if (Number.isNaN(birth.getTime())) return "-";
+
+    const today = new Date();
+    let years = today.getFullYear() - birth.getFullYear();
+    let months = today.getMonth() - birth.getMonth();
+
+    if (today.getDate() < birth.getDate()) {
+      months -= 1;
+    }
+
+    if (months < 0) {
+      years -= 1;
+      months += 12;
+    }
+
+    const ageText = `${years}세`;
+    return months > 0 ? `${ageText} ${months}개월` : ageText;
+  };
+
+  const handlePatientDoubleClick = (waitingPatient: WaitingPatient) => {
+    if (!onPatientSelect) return;
+
+    const patientInfo = patientInfoMap.get(waitingPatient.patientId);
+
+    const selectedPatient: PatientInfo = {
+      patientId: waitingPatient.patientId.toString(),
+      name: patientInfo?.name ?? waitingPatient.patientName,
+      age: patientInfo?.birth ? calculateAgeWithMonths(patientInfo.birth) : "-",
+      gender: patientInfo?.gender,
+      doctor: "-",
+      date: formatDate(waitingPatient.entryDate),
+      time: formatTime(waitingPatient.entryDate),
+      address: "-",
+      phone: patientInfo?.phoneNumber,
+    };
+
+    onPatientSelect(selectedPatient);
   };
 
   // 생년월일 포맷팅 함수
@@ -306,7 +370,11 @@ export default function WaitingStatus() {
                 {filteredPatients.map((patient) => {
                   const patientInfo = patientInfoMap.get(patient.patientId);
                   return (
-                    <tr key={patient.id} className={styles.tableRow}>
+                    <tr
+                      key={patient.id}
+                      className={styles.tableRow}
+                      onDoubleClick={() => handlePatientDoubleClick(patient)}
+                    >
                       <td className={styles.patientNumber}>{patient.patientId}</td>
                       <td className={styles.entryTime}>{formatTime(patient.entryDate)}</td>
                       <td 

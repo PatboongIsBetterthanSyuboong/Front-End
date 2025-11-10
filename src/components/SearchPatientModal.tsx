@@ -2,6 +2,7 @@
 
 import { ReactNode, useState, useEffect } from "react";
 import styles from "./SearchPatientModal.module.css";
+import { PatientInfo } from "./PatientInfoBar";
 
 interface Patient {
   id: number;
@@ -16,12 +17,13 @@ interface SearchPatientModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
+  onSelectPatient: (patient: PatientInfo) => void;
   children?: ReactNode;
 }
 
 type SearchOption = "전체" | "환자명" | "전화번호" | "생년월일" | "주민등록번호" | "환자번호";
 
-export default function SearchPatientModal({ isOpen, onClose, title, children }: SearchPatientModalProps) {
+export default function SearchPatientModal({ isOpen, onClose, title, onSelectPatient, children }: SearchPatientModalProps) {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [filteredPatients, setFilteredPatients] = useState<Patient[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -131,6 +133,45 @@ export default function SearchPatientModal({ isOpen, onClose, title, children }:
     }
   }, [isDropdownOpen]);
 
+  const calculateAgeWithMonths = (birthString: string) => {
+    if (!birthString) return "-";
+    const birth = new Date(birthString);
+    if (Number.isNaN(birth.getTime())) return "-";
+
+    const today = new Date();
+    let years = today.getFullYear() - birth.getFullYear();
+    let months = today.getMonth() - birth.getMonth();
+
+    if (today.getDate() < birth.getDate()) {
+      months -= 1;
+    }
+
+    if (months < 0) {
+      years -= 1;
+      months += 12;
+    }
+
+    const ageText = `${years}세`;
+    return months > 0 ? `${ageText} ${months}개월` : ageText;
+  };
+
+  const handlePatientSelect = (patient: Patient) => {
+    const selectedPatient: PatientInfo = {
+      patientId: patient.id?.toString(),
+      name: patient.name,
+      age: calculateAgeWithMonths(patient.birth),
+      gender: patient.gender,
+      doctor: "-",
+      date: "-",
+      time: "-",
+      address: "-",
+      phone: patient.phoneNumber,
+    };
+
+    onSelectPatient(selectedPatient);
+    onClose();
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -221,7 +262,11 @@ export default function SearchPatientModal({ isOpen, onClose, title, children }:
                       </tr>
                     ) : (
                       filteredPatients.map((patient) => (
-                        <tr key={patient.id} className={styles.tableRow}>
+                        <tr
+                          key={patient.id}
+                          className={styles.tableRow}
+                          onClick={() => handlePatientSelect(patient)}
+                        >
                           <td className={styles.entryTime}>-</td> {/* 최근내원일 */}
                           <td className={styles.patientName}>{patient.name}</td>
                           <td className={styles.gender}>

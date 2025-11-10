@@ -4,6 +4,7 @@ import { useState } from "react";
 import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
 import ActionBar from "@/components/ActionBar";
+import PatientInfoBar, { PatientInfo } from "@/components/PatientInfoBar";
 import PatientForm from "@/components/PatientForm";
 import WaitingStatus from "@/components/WaitingStatus";
 import MedicalInfo from "@/components/MedicalInfo";
@@ -18,6 +19,7 @@ import styles from "./page.module.css";
 
 export default function DashboardPage() {
   const [activeMenu, setActiveMenu] = useState("환자접수");
+  const [selectedPatient, setSelectedPatient] = useState<PatientInfo | null>(null);
 
   const handleMenuChange = (menuId: string) => {
     setActiveMenu(menuId);
@@ -40,7 +42,7 @@ export default function DashboardPage() {
 
           {/* Right Column - Waiting Status & Medical Info */}
           <div className={styles.rightColumn}>
-            <WaitingStatus />
+            <WaitingStatus onPatientSelect={setSelectedPatient} />
             <MedicalInfo />
           </div>
         </div>
@@ -57,7 +59,7 @@ export default function DashboardPage() {
           {/* Middle Column - Vertical Layout for Clinic Components */}
           <div className={styles.clinicMiddleColumn}>
             <div className={styles.verticalComponent}>
-              <WaitingStatus />
+              <WaitingStatus onPatientSelect={setSelectedPatient} />
             </div>
               <Disease />
               <Diagnosis />
@@ -81,7 +83,8 @@ export default function DashboardPage() {
         <Sidebar activeMenu={activeMenu} onMenuChange={handleMenuChange} />
 
         <main className={styles.mainContent}>
-          <ActionBar />
+          <ActionBar onPatientSelect={setSelectedPatient} />
+          <PatientInfoBar patient={selectedPatient ?? undefined} />
 
           <div className={styles.contentArea}>{renderContent()}</div>
         </main>

@@ -3,8 +3,13 @@
 import { useState } from "react";
 import styles from "./ActionBar.module.css";
 import SearchPatientModal from "./SearchPatientModal";
+import { PatientInfo } from "./PatientInfoBar";
 
-export default function ActionBar() {
+type ActionBarProps = {
+  onPatientSelect: (patient: PatientInfo) => void;
+};
+
+export default function ActionBar({ onPatientSelect }: ActionBarProps) {
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
 
   const today = new Date().toLocaleDateString("ko-KR", {
@@ -43,6 +48,9 @@ export default function ActionBar() {
         isOpen={isSearchModalOpen}
         onClose={closeSearchModal}
         title="환자 조회"
+        onSelectPatient={(patient) => {
+          onPatientSelect(patient);
+        }}
       />
     </>
   );
