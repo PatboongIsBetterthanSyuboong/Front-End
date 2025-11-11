@@ -97,6 +97,11 @@
   border-bottom-color: #3b82f6;
 }
 
+.active {
+  color: #3b82f6;
+  border-bottom-color: #3b82f6;
+}
+
 .resultSection {
   flex: 1;
   overflow: hidden;
@@ -139,5 +144,24 @@
 .resultName {
   flex: 1;
   color: white;
+}
+
+.loadingMessage,
+.emptyMessage,
+.errorMessage {
+  padding: 24px;
+  text-align: center;
+  color: #d1d5db;
+}
+
+.errorMessage {
+  color: #f87171;
+}
+
+.searchButton:disabled,
+.tab:disabled,
+.searchInput:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
