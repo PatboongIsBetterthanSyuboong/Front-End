@@ -15,6 +15,7 @@ import Disease from "@/components/Disease";
 import ViewDataBase from "@/components/ViewDataBase";
 import AIReport from "@/components/AIReport";
 import Calender from "@/components/Calender";
+import { MedicalSelectionProvider } from "@store/medicalSelection";
 import styles from "./page.module.css";
 
 export default function DashboardPage() {
@@ -49,28 +50,30 @@ export default function DashboardPage() {
       );
     } else if (activeMenu === "진료실") {
       return (
-        <div className={styles.contentGridClinic}>
-          {/* Left Column - Calendar & History */}
-          <div className={styles.leftColumn}>
-            <Calender />
-            <HistoryDiagnose />
-          </div>
-
-          {/* Middle Column - Vertical Layout for Clinic Components */}
-          <div className={styles.clinicMiddleColumn}>
-            <div className={styles.verticalComponent}>
-              <WaitingStatus onPatientSelect={setSelectedPatient} />
+        <MedicalSelectionProvider>
+          <div className={styles.contentGridClinic}>
+            {/* Left Column - Calendar & History */}
+            <div className={styles.leftColumn}>
+              <Calender />
+              <HistoryDiagnose />
             </div>
+
+            {/* Middle Column - Vertical Layout for Clinic Components */}
+            <div className={styles.clinicMiddleColumn}>
+              <div className={styles.verticalComponent}>
+                <WaitingStatus onPatientSelect={setSelectedPatient} />
+              </div>
               <Disease />
               <Diagnosis />
-          </div>
+            </div>
 
-          {/* Right Column - ViewDataBase & AIReport */}
-          <div className={styles.clinicRightColumn}>
-            <ViewDataBase />
-            <AIReport />
+            {/* Right Column - ViewDataBase & AIReport */}
+            <div className={styles.clinicRightColumn}>
+              <ViewDataBase />
+              <AIReport />
+            </div>
           </div>
-        </div>
+        </MedicalSelectionProvider>
       );
     }
   };

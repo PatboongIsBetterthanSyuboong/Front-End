@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type KeyboardEvent } from "react";
+import { useMedicalSelection } from "@store/medicalSelection";
 import { get } from "@/services";
 import styles from "./ViewDataBase.module.css";
 
@@ -12,11 +13,13 @@ interface DiseaseItem {
   name: string;
 }
 
-interface DiagnoseItem {
-  id: number;
-  code: string;
-  name: string;
+interface DiagnoseItem extends DiseaseItem {
+  dose: number;
+  time: number;
+  days: number;
 }
+
+type ResultItem = DiseaseItem | DiagnoseItem;
 
 export default function ViewDataBase() {
   const [activeTab, setActiveTab] = useState<ActiveTab>("disease");
@@ -24,6 +27,7 @@ export default function ViewDataBase() {
   const [diagnoses, setDiagnoses] = useState<DiagnoseItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { addDisease, addDiagnosis } = useMedicalSelection();
 
   const fetchDiseases = useCallback(async () => {
     setLoading(true);
@@ -61,7 +65,7 @@ export default function ViewDataBase() {
     }
   }, [activeTab, diseases.length, diagnoses.length, fetchDiseases, fetchDiagnoses]);
 
-  const itemsToRender = useMemo(() => {
+  const itemsToRender = useMemo<ResultItem[]>(() => {
     if (activeTab === "disease") {
       return diseases;
     }
@@ -73,6 +77,33 @@ export default function ViewDataBase() {
       setActiveTab(tab);
     }
   };
+
+  const handleItemDoubleClick = useCallback(
+    (item: ResultItem) => {
+      if (activeTab === "disease") {
+        addDisease(item as DiseaseItem);
+      } else {
+        const diagnoseItem = item as DiagnoseItem;
+        addDiagnosis({
+          ...diagnoseItem,
+          dose: diagnoseItem.dose ?? 0,
+          time: diagnoseItem.time ?? 0,
+          days: diagnoseItem.days ?? 0,
+        });
+      }
+    },
+    [activeTab, addDisease, addDiagnosis]
+  );
+
+  const handleKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLDivElement>, item: ResultItem) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        handleItemDoubleClick(item);
+      }
+    },
+    [handleItemDoubleClick]
+  );
 
   return (
     <div className={styles.container}>
@@ -121,7 +152,15 @@ export default function ViewDataBase() {
           ) : (
             <div className={styles.resultList}>
               {itemsToRender.map((item) => (
-                <div key={item.id} className={styles.resultItem}>
+                <div
+                  key={item.id}
+                  className={styles.resultItem}
+                  onDoubleClick={() => handleItemDoubleClick(item)}
+                  title="더블클릭하거나 Enter 키로 선택 영역에 추가"
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(event) => handleKeyDown(event, item)}
+                >
                   <div className={styles.resultCode}>{item.code}</div>
                   <div className={styles.resultName}>{item.name}</div>
                 </div>

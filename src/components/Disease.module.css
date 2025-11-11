@@ -11,12 +11,54 @@
   padding: 16px 20px;
   background-color: #333336;
   border-radius: 8px 8px 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .header h3 {
   margin: 0;
   font-size: 16px;
   font-weight: 600;
+}
+
+.controls {
+  display: flex;
+  gap: 8px;
+}
+
+.controlButton,
+.controlButtonSecondary {
+  padding: 6px 12px;
+  font-size: 13px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s ease, opacity 0.2s ease;
+}
+
+.controlButton {
+  background: #2563eb;
+  color: white;
+}
+
+.controlButton:hover {
+  background: #1d4ed8;
+}
+
+.controlButtonSecondary {
+  background: #4b5563;
+  color: #f3f4f6;
+}
+
+.controlButtonSecondary:hover {
+  background: #374151;
+}
+
+.controlButton:disabled,
+.controlButtonSecondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .content {
@@ -84,40 +126,51 @@
   border-right: none;
 }
 
-.patientNumber {
+.sequence {
   font-weight: 600;
-  color: #60a5fa !important;
+  color: #60a5fa;
+  width: 60px;
+}
+
+.identifier {
+  color: #cbd5f5;
   width: 80px;
 }
 
-.entryTime {
-  color: #9ca3af !important;
-  text-align: center;
-  width: 80px;
-}
-
-.patientName {
+.code {
+  color: #f9d14c;
   font-weight: 500;
-  color: #f3f4f6 !important;
-  min-width: 80px;
+  width: 110px;
 }
 
-.gender {
-  text-align: center;
-  width: 50px;
-  color: #d1d5db !important;
+.name {
+  text-align: left;
+  padding-left: 16px;
+  color: #f3f4f6;
 }
 
-.birthDate {
-  color: #9ca3af !important;
-  text-align: center;
-  width: 100px;
-}
-
-.department {
-  color: #34d399 !important;
-  font-weight: 500;
-  text-align: center;
+.actionCell {
   width: 80px;
+}
+
+.removeButton {
+  padding: 4px 8px;
+  font-size: 12px;
+  border-radius: 4px;
+  background: #ef4444;
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s ease, opacity 0.2s ease;
+}
+
+.removeButton:hover {
+  background: #dc2626;
+}
+
+.emptyRow {
+  text-align: center;
+  padding: 24px 16px;
+  color: #9ca3af;
 }
 
