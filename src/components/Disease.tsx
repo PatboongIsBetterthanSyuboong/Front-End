@@ -11,9 +11,10 @@ type DiseaseProps = {
   clinicVisit: ClinicVisitContext | null;
   ensureHistory: () => Promise<number>;
   employeeId: number;
+  onHistoryUpdated?: () => void;
 };
 
-export default function Disease({ clinicVisit, ensureHistory, employeeId }: DiseaseProps) {
+export default function Disease({ clinicVisit, ensureHistory, employeeId, onHistoryUpdated }: DiseaseProps) {
   const { diseases, removeDisease, clearDiseases } = useMedicalSelection();
   const [saving, setSaving] = useState(false);
   const prevPatientIdRef = useRef<number | null>(null);
@@ -40,6 +41,7 @@ export default function Disease({ clinicVisit, ensureHistory, employeeId }: Dise
     try {
       const historyId = await ensureHistory();
       await setHistoryDiseases(historyId, employeeId, diseases);
+      onHistoryUpdated?.();
       alert("상병 정보가 저장되었습니다.");
     } catch (error) {
       console.error("상병 정보 저장 실패:", error);

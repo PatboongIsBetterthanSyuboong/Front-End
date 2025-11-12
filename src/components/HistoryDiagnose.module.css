@@ -180,3 +180,22 @@
   text-align: right;
   color: #63b3ed;
 }
+
+.symptom {
+  padding: 8px 12px;
+  background: rgba(66, 153, 225, 0.12);
+  color: #e2e8f0;
+  font-size: 12px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.08);
+}
+
+.symptom span {
+  font-weight: 600;
+}
+
+.emptyMessage {
+  padding: 28px 12px;
+  text-align: center;
+  color: #cbd5f5;
+  font-size: 13px;
+}

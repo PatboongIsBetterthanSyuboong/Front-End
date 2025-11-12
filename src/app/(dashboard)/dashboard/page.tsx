@@ -9,12 +9,13 @@ import PatientForm from "@/components/PatientForm";
 import WaitingStatus, { WaitingVisitContext } from "@/components/WaitingStatus";
 import MedicalInfo from "@/components/MedicalInfo";
 import SpecialNote from "@/components/SpecialNote";
-import HistoryDiagnose from "@/components/HistoryDiagnose";
+import History from "@/components/History";
 import Diagnosis from "@/components/Diagnosis";
 import Disease from "@/components/Disease";
 import ViewDataBase from "@/components/ViewDataBase";
 import AIReport from "@/components/AIReport";
 import Calender from "@/components/Calender";
+import TimeLine from "@/components/TimeLine";
 import { MedicalSelectionProvider } from "@store/medicalSelection";
 import { ClinicVisitContext } from "@/types/clinic";
 import styles from "./page.module.css";
@@ -25,9 +26,16 @@ export default function DashboardPage() {
   const [selectedPatient, setSelectedPatient] = useState<PatientInfo | null>(null);
   const [clinicVisit, setClinicVisit] = useState<ClinicVisitContext | null>(null);
   const historyCreationRef = useRef<Promise<number> | null>(null);
+  const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
 
   const employeeId = Number(process.env.NEXT_PUBLIC_EMPLOYEE_ID ?? "1") || 1;
   const defaultDeptId = Number(process.env.NEXT_PUBLIC_DEFAULT_DEPT_ID ?? "1") || 1;
+  const selectedPatientId = (() => {
+    if (!selectedPatient?.patientId) return undefined;
+    const parsed = Number(selectedPatient.patientId);
+    return Number.isNaN(parsed) ? undefined : parsed;
+  })();
+  const clinicPatientId = clinicVisit?.patientId ?? selectedPatientId;
 
   const ensureHistory = useCallback(async () => {
     if (!clinicVisit) {
@@ -66,6 +74,7 @@ export default function DashboardPage() {
           }
           return { ...prev, historyId: history.id };
         });
+        setHistoryRefreshKey((prev) => prev + 1);
         historyCreationRef.current = null;
         return history.id;
       })
@@ -120,7 +129,11 @@ export default function DashboardPage() {
           {/* Left Column - Special Notes & History */}
           <div className={styles.leftColumn}>
             <SpecialNote />
-            <HistoryDiagnose />
+            <History
+              employeeId={employeeId}
+              patientId={selectedPatientId}
+              refreshKey={historyRefreshKey}
+            />
           </div>
 
           {/* Middle Column - Patient Form */}
@@ -144,7 +157,7 @@ export default function DashboardPage() {
             {/* Left Column - Calendar & History */}
             <div className={styles.leftColumn}>
               <Calender />
-              <HistoryDiagnose />
+              <TimeLine employeeId={employeeId} patientId={clinicPatientId} refreshKey={historyRefreshKey} />
             </div>
 
             {/* Middle Column - Vertical Layout for Clinic Components */}
@@ -154,8 +167,18 @@ export default function DashboardPage() {
                   onPatientSelect={(patient, visit) => handlePatientSelection(patient, visit)}
                 />
               </div>
-              <Disease clinicVisit={clinicVisit} ensureHistory={ensureHistory} employeeId={employeeId} />
-              <Diagnosis clinicVisit={clinicVisit} ensureHistory={ensureHistory} employeeId={employeeId} />
+              <Disease
+                clinicVisit={clinicVisit}
+                ensureHistory={ensureHistory}
+                employeeId={employeeId}
+                onHistoryUpdated={() => setHistoryRefreshKey((prev) => prev + 1)}
+              />
+              <Diagnosis
+                clinicVisit={clinicVisit}
+                ensureHistory={ensureHistory}
+                employeeId={employeeId}
+                onHistoryUpdated={() => setHistoryRefreshKey((prev) => prev + 1)}
+              />
             </div>
 
             {/* Right Column - ViewDataBase & AIReport */}

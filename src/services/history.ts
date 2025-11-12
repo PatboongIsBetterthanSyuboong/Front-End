@@ -1,4 +1,5 @@
-import { post, put } from "./http/client";
+import { get, post, put } from "./http/client";
+import type { HistoryEntry } from "@/types/history";
 
 export interface HistoryPayload {
   employeeId: number;
@@ -43,8 +44,27 @@ export interface HistoryDiagnoseResponse {
   days: number;
 }
 
+export interface HistoryListResponse {
+  patientId: number;
+  histories: HistoryEntry[];
+}
+
 export async function createHistory(payload: HistoryPayload): Promise<HistoryResponse> {
   return post<HistoryResponse, HistoryPayload>("/api/histories/write_history", payload);
+}
+
+export async function getPatientHistories(
+  employeeId: number,
+  patientId: number,
+  startDate?: string,
+  endDate?: string
+): Promise<HistoryListResponse> {
+  const params: Record<string, string> = {
+    patientId: String(patientId),
+  };
+  if (startDate) params.startDate = startDate;
+  if (endDate) params.endDate = endDate;
+  return get<HistoryListResponse>(`/api/histories/search_history/${employeeId}`, { params });
 }
 
 export async function setHistoryDiseases(
@@ -75,16 +95,21 @@ export async function setHistoryDiagnoses(
   );
 }
 
-export async function getHistories(
-  employeeId: number,
-  patientId: number,
-  startDate?: string,
-  endDate?: string
-): Promise<HistoryResponse[]> {
-  const params: Record<string, string> = { employeeId: String(employeeId), patientId: String(patientId) };
-  if (startDate) params.startDate = startDate;
-  if (endDate) params.endDate = endDate;
-  return get<HistoryResponse[]>(`/api/histories/search_history/${employeeId}`, { params });
+export async function getHistoryDiseases(
+  historyId: number,
+  employeeId: number
+): Promise<HistoryDiseaseResponse[]> {
+  return get<HistoryDiseaseResponse[]>(`/api/histories/${historyId}/get_diseases`, {
+    params: { employeeId },
+  });
 }
 
+export async function getHistoryDiagnoses(
+  historyId: number,
+  employeeId: number
+): Promise<HistoryDiagnoseResponse[]> {
+  return get<HistoryDiagnoseResponse[]>(`/api/histories/${historyId}/get_diagnoses`, {
+    params: { employeeId },
+  });
+}
 

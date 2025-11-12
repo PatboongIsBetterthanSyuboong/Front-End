@@ -10,9 +10,10 @@ type DiagnosisProps = {
   clinicVisit: ClinicVisitContext | null;
   ensureHistory: () => Promise<number>;
   employeeId: number;
+  onHistoryUpdated?: () => void;
 };
 
-export default function Diagnosis({ clinicVisit, ensureHistory, employeeId }: DiagnosisProps) {
+export default function Diagnosis({ clinicVisit, ensureHistory, employeeId, onHistoryUpdated }: DiagnosisProps) {
   const { diagnoses, removeDiagnosis, clearDiagnoses } = useMedicalSelection();
   const [saving, setSaving] = useState(false);
   const prevPatientIdRef = useRef<number | null>(null);
@@ -45,6 +46,7 @@ export default function Diagnosis({ clinicVisit, ensureHistory, employeeId }: Di
           id: item.id,
         }))
       );
+      onHistoryUpdated?.();
       alert("처방 정보가 저장되었습니다.");
     } catch (error) {
       console.error("처방 정보 저장 실패:", error);
