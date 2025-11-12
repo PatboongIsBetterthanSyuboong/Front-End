@@ -24,8 +24,16 @@ interface PatientDetail {
   gender: string;
 }
 
+export interface WaitingVisitContext {
+  waitingId: number;
+  patientId: number;
+  deptId: number;
+  entryDate: string;
+  symptom: string;
+}
+
 interface WaitingStatusProps {
-  onPatientSelect?: (patient: PatientInfo) => void;
+  onPatientSelect?: (patient: PatientInfo, visit?: WaitingVisitContext) => void;
 }
 
 export default function WaitingStatus({ onPatientSelect }: WaitingStatusProps = {}) {
@@ -191,7 +199,15 @@ export default function WaitingStatus({ onPatientSelect }: WaitingStatusProps = 
       phone: patientInfo?.phoneNumber,
     };
 
-    onPatientSelect(selectedPatient);
+    const visitContext: WaitingVisitContext = {
+      waitingId: waitingPatient.id,
+      patientId: waitingPatient.patientId,
+      deptId: waitingPatient.deptId,
+      entryDate: waitingPatient.entryDate,
+      symptom: waitingPatient.symptom ?? "",
+    };
+
+    onPatientSelect(selectedPatient, visitContext);
   };
 
   // 생년월일 포맷팅 함수

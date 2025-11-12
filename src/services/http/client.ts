@@ -6,7 +6,12 @@ let sharedInstance: AxiosInstance | null = null;
 let sharedTokenGetter: TokenGetter | undefined;
 
 function createInstance(options?: HttpClientOptions): AxiosInstance {
-  const baseURL = options?.baseURL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? "/";
+  const defaultBaseUrl =
+    process.env.NEXT_PUBLIC_API_BASE_URL && process.env.NEXT_PUBLIC_API_BASE_URL.trim().length > 0
+      ? process.env.NEXT_PUBLIC_API_BASE_URL
+      : "http://localhost:8080";
+
+  const baseURL = options?.baseURL ?? defaultBaseUrl;
   const timeout = options?.timeoutMs ?? 15000;
 
   const instance = axios.create({

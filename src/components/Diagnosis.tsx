@@ -1,16 +1,58 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useMedicalSelection } from "@store/medicalSelection";
 import styles from "./Diagnosis.module.css";
+import { ClinicVisitContext } from "@/types/clinic";
+import { setHistoryDiagnoses } from "@/services/history";
 
-export default function Diagnosis() {
+type DiagnosisProps = {
+  clinicVisit: ClinicVisitContext | null;
+  ensureHistory: () => Promise<number>;
+  employeeId: number;
+};
+
+export default function Diagnosis({ clinicVisit, ensureHistory, employeeId }: DiagnosisProps) {
   const { diagnoses, removeDiagnosis, clearDiagnoses } = useMedicalSelection();
+  const [saving, setSaving] = useState(false);
+  const prevPatientIdRef = useRef<number | null>(null);
 
-  const handleSave = useCallback(() => {
-    console.log("Saving diagnoses", diagnoses);
-    alert("처방 정보가 저장되었습니다. (Demo)");
-  }, [diagnoses]);
+  useEffect(() => {
+    const currentPatientId = clinicVisit?.patientId ?? null;
+    if (prevPatientIdRef.current !== currentPatientId) {
+      prevPatientIdRef.current = currentPatientId;
+      clearDiagnoses();
+    }
+  }, [clinicVisit?.patientId, clearDiagnoses]);
+
+  const handleSave = useCallback(async () => {
+    if (!clinicVisit) {
+      alert("환자를 먼저 선택해주세요.");
+      return;
+    }
+
+    if (diagnoses.length === 0) {
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const historyId = await ensureHistory();
+      await setHistoryDiagnoses(
+        historyId,
+        employeeId,
+        diagnoses.map((item) => ({
+          id: item.id,
+        }))
+      );
+      alert("처방 정보가 저장되었습니다.");
+    } catch (error) {
+      console.error("처방 정보 저장 실패:", error);
+      alert("처방 정보를 저장하지 못했습니다. 잠시 후 다시 시도해주세요.");
+    } finally {
+      setSaving(false);
+    }
+  }, [clinicVisit, diagnoses, employeeId, ensureHistory]);
 
   return (
     <div className={styles.container}>
@@ -21,9 +63,9 @@ export default function Diagnosis() {
             type="button"
             className={styles.controlButton}
             onClick={handleSave}
-            disabled={diagnoses.length === 0}
+            disabled={diagnoses.length === 0 || saving}
           >
-            저장
+            {saving ? "저장 중..." : "저장"}
           </button>
           <button
             type="button"

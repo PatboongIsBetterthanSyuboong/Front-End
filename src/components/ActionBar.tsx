@@ -6,7 +6,7 @@ import SearchPatientModal from "./SearchPatientModal";
 import { PatientInfo } from "./PatientInfoBar";
 
 type ActionBarProps = {
-  onPatientSelect: (patient: PatientInfo) => void;
+  onPatientSelect: (patient: PatientInfo, visit?: unknown) => void;
 };
 
 export default function ActionBar({ onPatientSelect }: ActionBarProps) {
