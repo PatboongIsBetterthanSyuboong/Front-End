@@ -49,13 +49,20 @@ function formatDiagnoseMeta(diagnose: HistoryDiagnoseResponse) {
   return parts.join(" · ");
 }
 
+function formatLocalDate(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 export default function History({ employeeId, patientId, refreshKey }: HistoryProps) {
   const [startDate, setStartDate] = useState(() => {
     const date = new Date();
     date.setFullYear(date.getFullYear() - 1);
-    return date.toISOString().slice(0, 10);
+    return formatLocalDate(date);
   });
-  const [endDate, setEndDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [endDate, setEndDate] = useState(() => formatLocalDate(new Date()));
   const [selectedPeriod, setSelectedPeriod] = useState("12개월");
   const [records, setRecords] = useState<HistoryRecord[]>([]);
   const [loading, setLoading] = useState(false);
@@ -125,8 +132,8 @@ export default function History({ employeeId, patientId, refreshKey }: HistoryPr
         break;
     }
 
-    setStartDate(nextStart.toISOString().slice(0, 10));
-    setEndDate(today.toISOString().slice(0, 10));
+    setStartDate(formatLocalDate(nextStart));
+    setEndDate(formatLocalDate(today));
   };
 
   return (
@@ -224,5 +231,6 @@ export default function History({ employeeId, patientId, refreshKey }: HistoryPr
     </div>
   );
 }
+
 
 

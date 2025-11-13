@@ -1,11 +1,36 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import styles from "./Calender.module.css";
+import { getPatientHistories } from "@/services/history";
+import type { HistoryEntry } from "@/types/history";
 
-export default function Calender() {
+type CalenderProps = {
+  employeeId: number;
+  patientId?: number | null;
+  refreshKey?: number;
+};
+
+function formatLocalDate(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function toDateKey(value: string | Date | null | undefined) {
+  if (!value) return null;
+  const date = typeof value === "string" ? new Date(value) : value;
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+  return formatLocalDate(date);
+}
+
+export default function Calender({ employeeId, patientId, refreshKey }: CalenderProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [historyDateSet, setHistoryDateSet] = useState<Set<string>>(() => new Set());
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -79,9 +104,54 @@ export default function Calender() {
     return days[dayIndex];
   };
 
-  const formatMonthYear = () => {
-    return `${year}년 ${month + 1}월`;
-  };
+  const formatMonthYear = () => `${year}년 ${month + 1}월`;
+
+  useEffect(() => {
+    if (!patientId) {
+      setHistoryDateSet(new Set());
+      setSelectedDate(null);
+      return;
+    }
+
+    const endDate = new Date();
+    const startDate = new Date(endDate);
+    startDate.setFullYear(startDate.getFullYear() - 5);
+
+    const startDateStr = formatLocalDate(startDate);
+    const endDateStr = formatLocalDate(endDate);
+
+    getPatientHistories(employeeId, patientId, startDateStr, endDateStr)
+      .then((res) => {
+        const histories = Array.isArray(res.histories) ? res.histories : [];
+        const nextSet = new Set<string>();
+        histories.forEach((history: HistoryEntry) => {
+          const key = toDateKey(history.entryDate);
+          if (key) {
+            nextSet.add(key);
+          }
+        });
+        setHistoryDateSet(nextSet);
+      })
+      .catch((error) => {
+        console.error("캘린더 히스토리 조회 실패:", error);
+        setHistoryDateSet(new Set());
+      });
+  }, [employeeId, patientId, refreshKey]);
+
+  useEffect(() => {
+    if (!patientId || historyDateSet.size === 0) {
+      return;
+    }
+    const latest = [...historyDateSet]
+      .map((key) => new Date(key))
+      .filter((date) => !Number.isNaN(date.getTime()))
+      .sort((a, b) => b.getTime() - a.getTime())[0];
+
+    if (latest) {
+      setSelectedDate(latest);
+      setCurrentDate(new Date(latest.getFullYear(), latest.getMonth(), 1));
+    }
+  }, [historyDateSet, patientId]);
 
   return (
     <div className={styles.container}>
@@ -120,6 +190,8 @@ export default function Calender() {
       <div className={styles.daysGrid}>
         {calendarDays.map((date, index) => {
           const dayOfWeek = date.getDay();
+          const dateKey = toDateKey(date);
+          const hasHistory = dateKey ? historyDateSet.has(dateKey) : false;
           const isCurrent = isCurrentMonth(date);
           const isTodayDate = isToday(date);
           const isSelectedDate = isSelected(date);
@@ -133,6 +205,8 @@ export default function Calender() {
                 dayOfWeek === 6 ? styles.saturday : ""
               } ${isTodayDate ? styles.today : ""} ${
                 isSelectedDate ? styles.selected : ""
+              } ${
+                hasHistory ? styles.hasHistory : ""
               }`}
               onClick={() => handleDateClick(date)}
             >

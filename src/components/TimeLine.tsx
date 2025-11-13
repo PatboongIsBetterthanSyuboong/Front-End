@@ -35,6 +35,13 @@ function formatSymptom(symptom?: string | null) {
   return symptom;
 }
 
+function formatLocalDate(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 export default function TimeLine({ employeeId, patientId, refreshKey }: TimeLineProps) {
   const [histories, setHistories] = useState<HistoryEntry[]>([]);
   const [loading, setLoading] = useState(false);
@@ -53,8 +60,8 @@ export default function TimeLine({ employeeId, patientId, refreshKey }: TimeLine
     const startDate = new Date(endDate);
     startDate.setFullYear(startDate.getFullYear() - 5);
 
-    const startDateStr = startDate.toISOString().slice(0, 10);
-    const endDateStr = endDate.toISOString().slice(0, 10);
+    const startDateStr = formatLocalDate(startDate);
+    const endDateStr = formatLocalDate(endDate);
 
     getPatientHistories(employeeId, patientId, startDateStr, endDateStr)
       .then((res) => {
