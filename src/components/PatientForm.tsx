@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, forwardRef, useImperativeHandle } from "react";
 import styles from "./PatientForm.module.css";
 
 interface PatientData {
@@ -11,8 +11,25 @@ interface PatientData {
   gender: string;
 }
 
-export default function PatientForm() {
-  const [formData, setFormData] = useState({
+export type PatientFormData = {
+  name: string;
+  birthDate: string;
+  phone: string;
+  identityNumber: string;
+  gender: string;
+  address: string;
+  symptoms: string;
+  notes: string;
+};
+
+export interface PatientFormRef {
+  getFormData: () => PatientFormData;
+  submitPatientData: (customMessage?: string) => Promise<void>;
+  resetForm: () => void;
+}
+
+const PatientForm = forwardRef<PatientFormRef>((props, ref) => {
+  const [formData, setFormData] = useState<PatientFormData>({
     name: "",
     birthDate: "",
     phone: "",
@@ -24,6 +41,12 @@ export default function PatientForm() {
   });
 
   const [isLoading, setIsLoading] = useState(false);
+
+  useImperativeHandle(ref, () => ({
+    getFormData: () => formData,
+    submitPatientData,
+    resetForm,
+  }));
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -172,10 +195,6 @@ export default function PatientForm() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await submitPatientData();
-  };
 
 
 
@@ -205,7 +224,7 @@ export default function PatientForm() {
         </button>
       </div>
       <div className={styles.content}>
-        <form onSubmit={handleSubmit} className={styles.form}>
+        <form className={styles.form}>
         <div className={styles.row}>
           <label className={styles.field}>
             <span className={styles.label}>환자명 *</span>
@@ -296,15 +315,12 @@ export default function PatientForm() {
           />
         </label>
 
-        <button
-          type="submit"
-          className={styles.submitButton}
-          disabled={isLoading}
-        >
-          {isLoading ? "등록 중..." : "환자 등록"}
-        </button>
       </form>
       </div>
     </div>
   );
-}
+});
+
+PatientForm.displayName = "PatientForm";
+
+export default PatientForm;

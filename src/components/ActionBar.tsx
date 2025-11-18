@@ -7,9 +7,10 @@ import { PatientInfo } from "./PatientInfoBar";
 
 type ActionBarProps = {
   onPatientSelect: (patient: PatientInfo, visit?: unknown) => void;
+  onRegisterClick?: () => void;
 };
 
-export default function ActionBar({ onPatientSelect }: ActionBarProps) {
+export default function ActionBar({ onPatientSelect, onRegisterClick }: ActionBarProps) {
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
 
   const today = new Date().toLocaleDateString("ko-KR", {
@@ -35,6 +36,12 @@ export default function ActionBar({ onPatientSelect }: ActionBarProps) {
         </div>
 
         <div className={styles.rightSection}>
+          <button
+            className={`${styles.button} ${styles.registerButton}`}
+            onClick={onRegisterClick}
+          >
+            환자 등록
+          </button>
           <button
             className={`${styles.button} ${styles.searchButton}`}
             onClick={handleSearchClick}

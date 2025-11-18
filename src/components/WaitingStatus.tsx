@@ -13,6 +13,9 @@ interface WaitingPatient {
   entryDate: string;
   state: string;
   patientName?: string;
+  department?: string; // 진료과목
+  doctor?: string; // 진료의사
+  visitTime?: string; // 접수시간
 }
 
 interface PatientDetail {
@@ -224,20 +227,6 @@ export default function WaitingStatus({ onPatientSelect }: WaitingStatusProps = 
     }
   };
 
-  // 진료과 이름 가져오기
-  const getDepartmentName = (deptId: number) => {
-    const departments: { [key: number]: string } = {
-      1: "내과",
-      2: "외과", 
-      3: "소아과",
-      4: "산부인과",
-      5: "정형외과",
-      6: "피부과",
-      7: "안과",
-      8: "이비인후과",
-    };
-    return departments[deptId] || "일반진료";
-  };
 
   // 상태 한글 변환
   const getStatusLabel = (state: string) => {
@@ -379,7 +368,8 @@ export default function WaitingStatus({ onPatientSelect }: WaitingStatusProps = 
                   <th>환자명</th>
                   <th>성별</th>
                   <th>생년월일</th>
-                  <th>진료과</th>
+                  <th>진료과목</th>
+                  <th>진료의사</th>
                 </tr>
               </thead>
               <tbody>
@@ -392,7 +382,9 @@ export default function WaitingStatus({ onPatientSelect }: WaitingStatusProps = 
                       onDoubleClick={() => handlePatientDoubleClick(patient)}
                     >
                       <td className={styles.patientNumber}>{patient.patientId}</td>
-                      <td className={styles.entryTime}>{formatTime(patient.entryDate)}</td>
+                      <td className={styles.entryTime}>
+                        {patient.visitTime || formatTime(patient.entryDate)}
+                      </td>
                       <td 
                         className={styles.patientName}
                         onContextMenu={(e) => handleContextMenu(e, patient.patientId)}
@@ -407,7 +399,10 @@ export default function WaitingStatus({ onPatientSelect }: WaitingStatusProps = 
                         {patientInfo?.birth ? formatBirthDate(patientInfo.birth) : '-'}
                       </td>
                       <td className={styles.department}>
-                        {getDepartmentName(patient.deptId)}
+                        {patient.department || '-'}
+                      </td>
+                      <td className={styles.doctor}>
+                        {patient.doctor || '-'}
                       </td>
                     </tr>
                   );

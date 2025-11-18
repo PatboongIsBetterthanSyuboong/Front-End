@@ -1,11 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useState, forwardRef, useImperativeHandle } from "react";
 import styles from "./MedicalInfo.module.css";
 
-export default function MedicalInfo() {
-  const [formData, setFormData] = useState({
-    department: "3진료실",
+export type MedicalInfoFormData = {
+  department: string;
+  doctor: string;
+  visitDate: string;
+  visitTime: string;
+  visitType: string;
+  visitReason: string;
+  visitRoute: string;
+  insuranceType: string;
+  memo: string;
+};
+
+export interface MedicalInfoRef {
+  getFormData: () => MedicalInfoFormData;
+  resetForm: () => void;
+}
+
+const MedicalInfo = forwardRef<MedicalInfoRef>((props, ref) => {
+  const [formData, setFormData] = useState<MedicalInfoFormData>({
+    department: "검진",
     doctor: "최인우",
     visitDate: "2025-10-28",
     visitTime: "08:45",
@@ -27,6 +44,25 @@ export default function MedicalInfo() {
     }));
   };
 
+  const resetForm = () => {
+    setFormData({
+      department: "검진",
+      doctor: "최인우",
+      visitDate: "2025-10-28",
+      visitTime: "08:45",
+      visitType: "재진",
+      visitReason: "",
+      visitRoute: "",
+      insuranceType: "",
+      memo: "",
+    });
+  };
+
+  useImperativeHandle(ref, () => ({
+    getFormData: () => formData,
+    resetForm,
+  }));
+
   return (
     <div className={styles.container}>
       <div className={styles.header}>
@@ -45,9 +81,9 @@ export default function MedicalInfo() {
               onChange={handleInputChange}
               className={styles.select}
             >
-              <option value="3진료실">3진료실</option>
-              <option value="1진료실">1진료실</option>
-              <option value="2진료실">2진료실</option>
+              <option value="검진">검진</option>
+              <option value="내과">내과</option>
+              <option value="정형외과">정형외과</option>
             </select>
           </div>
 
@@ -166,4 +202,8 @@ export default function MedicalInfo() {
       </div>
     </div>
   );
-}
+});
+
+MedicalInfo.displayName = "MedicalInfo";
+
+export default MedicalInfo;

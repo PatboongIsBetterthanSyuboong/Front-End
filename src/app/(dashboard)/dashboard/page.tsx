@@ -5,9 +5,9 @@ import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
 import ActionBar from "@/components/ActionBar";
 import PatientInfoBar, { PatientInfo } from "@/components/PatientInfoBar";
-import PatientForm from "@/components/PatientForm";
+import PatientForm, { PatientFormRef } from "@/components/PatientForm";
 import WaitingStatus, { WaitingVisitContext } from "@/components/WaitingStatus";
-import MedicalInfo from "@/components/MedicalInfo";
+import MedicalInfo, { MedicalInfoRef } from "@/components/MedicalInfo";
 import SpecialNote from "@/components/SpecialNote";
 import History from "@/components/History";
 import Diagnosis from "@/components/Diagnosis";
@@ -34,6 +34,8 @@ export default function DashboardPage() {
   const [clinicVisit, setClinicVisit] = useState<ClinicVisitContext | null>(null);
   const historyCreationRef = useRef<Promise<number> | null>(null);
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
+  const patientFormRef = useRef<PatientFormRef>(null);
+  const medicalInfoRef = useRef<MedicalInfoRef>(null);
 
   const employeeId = Number(process.env.NEXT_PUBLIC_EMPLOYEE_ID ?? "1") || 1;
   const defaultDeptId = Number(process.env.NEXT_PUBLIC_DEFAULT_DEPT_ID ?? "1") || 1;
@@ -129,6 +131,130 @@ export default function DashboardPage() {
     [defaultDeptId]
   );
 
+  // 진료과 이름을 deptId로 변환하는 함수
+  const getDeptIdFromDepartment = (department: string): number => {
+    const deptMap: Record<string, number> = {
+      "검진": 1,
+      "내과": 2,
+      "정형외과": 3,
+    };
+    return deptMap[department] || defaultDeptId;
+  };
+
+  // 환자 등록 핸들러
+  const handleRegisterPatient = useCallback(async () => {
+    if (!patientFormRef.current || !medicalInfoRef.current) {
+      alert("폼 데이터를 불러올 수 없습니다.");
+      return;
+    }
+
+    const patientData = patientFormRef.current.getFormData();
+    const medicalData = medicalInfoRef.current.getFormData();
+
+    // 환자 정보 필수 필드 검증
+    if (
+      !patientData.name ||
+      !patientData.birthDate ||
+      !patientData.phone ||
+      !patientData.identityNumber
+    ) {
+      alert("환자 정보의 필수 항목(환자명, 생년월일, 연락처, 주민등록번호)을 입력해주세요.");
+      return;
+    }
+
+    // 진료 정보 필수 필드 검증
+    if (
+      !medicalData.department ||
+      !medicalData.doctor ||
+      !medicalData.visitDate ||
+      !medicalData.visitTime
+    ) {
+      alert("진료 정보의 필수 항목(진료과목, 진료의사, 진료일, 접수시간)을 입력해주세요.");
+      return;
+    }
+
+    try {
+      // 1. 환자 등록
+      const patientPayload = {
+        name: patientData.name,
+        phoneNumber: patientData.phone,
+        identityNumber: patientData.identityNumber,
+        birth: patientData.birthDate,
+        gender: patientData.gender,
+      };
+
+      console.log("환자 등록 요청 시작:", patientPayload);
+
+      const patientResponse = await fetch(
+        "http://localhost:8080/api/patients/get_patient_id",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(patientPayload),
+        }
+      );
+
+      if (!patientResponse.ok) {
+        const errorText = await patientResponse.text();
+        console.error("서버 오류 응답:", errorText);
+        throw new Error(
+          `HTTP error! status: ${patientResponse.status}, message: ${errorText}`
+        );
+      }
+
+      const patientResult = await patientResponse.json();
+      const patientId = patientResult.patientId;
+      console.log("환자 등록 성공:", patientResult);
+
+      // 2. 대기 목록 등록
+      const deptId = getDeptIdFromDepartment(medicalData.department);
+      const waitingData = {
+        patientId: patientId,
+        deptId: deptId,
+        symptom: patientData.symptoms || medicalData.visitReason || "일반 진료",
+        state: "waiting",
+        department: medicalData.department, // 진료과목
+        doctor: medicalData.doctor, // 진료의사
+        visitTime: medicalData.visitTime, // 접수시간
+      };
+
+      console.log("대기 목록 등록 시작:", waitingData);
+
+      const waitingResponse = await fetch(
+        "http://localhost:8080/api/waiting/register",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(waitingData),
+        }
+      );
+
+      if (!waitingResponse.ok) {
+        const errorText = await waitingResponse.text();
+        console.error("대기 등록 오류:", errorText);
+        throw new Error(`대기 등록 실패: ${waitingResponse.status} - ${errorText}`);
+      }
+
+      const waitingResult = await waitingResponse.json();
+      console.log("대기 등록 성공:", waitingResult);
+
+      alert(
+        `환자 정보와 진료 정보가 등록되고 대기 목록에 추가되었습니다! (환자 ID: ${patientId})`
+      );
+
+      // 폼 초기화
+      patientFormRef.current.resetForm();
+      medicalInfoRef.current.resetForm();
+    } catch (error) {
+      console.error("등록 실패:", error);
+      alert("등록 중 오류가 발생했습니다. 다시 시도해주세요.");
+    }
+  }, [defaultDeptId]);
+
   const renderContent = () => {
     if (activeMenu === "환자접수") {
       return (
@@ -145,7 +271,7 @@ export default function DashboardPage() {
 
           {/* Middle Column - Patient Form */}
           <div className={styles.middleColumn}>
-            <PatientForm />
+            <PatientForm ref={patientFormRef} />
           </div>
 
           {/* Right Column - Waiting Status & Medical Info */}
@@ -153,7 +279,7 @@ export default function DashboardPage() {
             <WaitingStatus
               onPatientSelect={(patient, visit) => handlePatientSelection(patient, visit)}
             />
-            <MedicalInfo />
+            <MedicalInfo ref={medicalInfoRef} />
           </div>
         </div>
       );
@@ -207,7 +333,10 @@ export default function DashboardPage() {
         <Sidebar activeMenu={activeMenu} onMenuChange={handleMenuChange} />
 
         <main className={styles.mainContent}>
-          <ActionBar onPatientSelect={(patient) => handlePatientSelection(patient, undefined)} />
+          <ActionBar 
+            onPatientSelect={(patient) => handlePatientSelection(patient, undefined)}
+            onRegisterClick={handleRegisterPatient}
+          />
           <PatientInfoBar patient={selectedPatient ?? undefined} />
 
           <div className={styles.contentArea}>{renderContent()}</div>
