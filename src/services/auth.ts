@@ -1,4 +1,5 @@
-import { post } from "./http/client";
+import { Role } from "@/types/user";
+import { post, get } from "./http/client";
 import { clearTokens, getRefreshToken, setAccessToken, setRefreshToken } from "@/lib/auth/token";
 
 export interface LoginRequestBody {
@@ -47,4 +48,7 @@ export async function logout(): Promise<void> {
   }
 }
 
-
+export async function getRole(): Promise<Role> {  
+  const data = await get<Role>("/api/user/get_role");
+  return data;
+}

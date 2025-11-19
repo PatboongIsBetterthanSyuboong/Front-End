@@ -4,6 +4,7 @@ import type { HttpClientOptions, TokenGetter } from "./types";
 
 let sharedInstance: AxiosInstance | null = null;
 let sharedTokenGetter: TokenGetter | undefined;
+let interceptorsAttached = false;
 
 function createInstance(options?: HttpClientOptions): AxiosInstance {
   const defaultBaseUrl =
@@ -24,15 +25,18 @@ function createInstance(options?: HttpClientOptions): AxiosInstance {
     },
   });
 
-  attachInterceptors(instance, options?.getAuthToken ?? sharedTokenGetter);
+  // 인터셉터는 한 번만 추가하고, 내부에서 sharedTokenGetter를 참조
+  if (!interceptorsAttached) {
+    attachInterceptors(instance, async () => {
+      return sharedTokenGetter ? await sharedTokenGetter() : null;
+    });
+    interceptorsAttached = true;
+  }
   return instance;
 }
 
 export function setAuthTokenGetter(getter: TokenGetter): void {
   sharedTokenGetter = getter;
-  if (sharedInstance) {
-    attachInterceptors(sharedInstance, sharedTokenGetter);
-  }
 }
 
 export function http(options?: HttpClientOptions): AxiosInstance {
