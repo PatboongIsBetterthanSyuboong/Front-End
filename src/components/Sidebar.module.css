@@ -33,6 +33,15 @@
   background: #515154;
 }
 
+.menuItem:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.menuItem:disabled:hover {
+  background: transparent;
+}
+
 /* 반응형 디자인 */
 @media (max-width: 1024px) {
   .sidebar {

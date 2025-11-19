@@ -49,6 +49,6 @@ export async function logout(): Promise<void> {
 }
 
 export async function getRole(): Promise<Role> {  
-  const data = await get<Role>("/api/user/get_role");
+  const data = await get<Role>("/api/patients/get_role");
   return data;
 }

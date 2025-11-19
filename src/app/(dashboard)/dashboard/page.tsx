@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
 import ActionBar from "@/components/ActionBar";
@@ -18,6 +18,8 @@ import Calender from "@/components/Calender";
 import TimeLine from "@/components/TimeLine";
 import { MedicalSelectionProvider } from "@store/medicalSelection";
 import { ClinicVisitContext } from "@/types/clinic";
+import { Role } from "@/types/user";
+import { getRole } from "@/services/auth";
 import styles from "./page.module.css";
 import { createHistory } from "@/services/history";
 
@@ -36,6 +38,7 @@ export default function DashboardPage() {
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
   const patientFormRef = useRef<PatientFormRef>(null);
   const medicalInfoRef = useRef<MedicalInfoRef>(null);
+  const [userRole, setUserRole] = useState<Role | null>(null);
 
   const employeeId = Number(process.env.NEXT_PUBLIC_EMPLOYEE_ID ?? "1") || 1;
   const defaultDeptId = Number(process.env.NEXT_PUBLIC_DEFAULT_DEPT_ID ?? "1") || 1;
@@ -45,6 +48,50 @@ export default function DashboardPage() {
     return Number.isNaN(parsed) ? undefined : parsed;
   })();
   const clinicPatientId = clinicVisit?.patientId ?? selectedPatientId;
+
+  // 메뉴 접근 권한 체크 함수
+  const canAccessMenu = useCallback((menuId: string): boolean => {
+    if (!userRole) return false;
+    
+    if (menuId === "환자접수") {
+      return userRole === Role.SUPER_USER || userRole === Role.RECEPTIONIST;
+    } else if (menuId === "진료실") {
+      return userRole === Role.SUPER_USER || userRole === Role.DOCTOR;
+    }
+    return false;
+  }, [userRole]);
+
+  // 사용자 역할 가져오기 및 초기 메뉴 설정
+  useEffect(() => {
+    const fetchRole = async () => {
+      try {
+        const role = await getRole();
+        setUserRole(role);
+        
+        // 현재 선택된 메뉴에 접근 권한이 없으면 접근 가능한 첫 번째 메뉴로 변경
+        const checkAccess = (menuId: string, userRole: Role): boolean => {
+          if (menuId === "환자접수") {
+            return userRole === Role.SUPER_USER || userRole === Role.RECEPTIONIST;
+          } else if (menuId === "진료실") {
+            return userRole === Role.SUPER_USER || userRole === Role.DOCTOR;
+          }
+          return false;
+        };
+        
+        if (!checkAccess(activeMenu, role)) {
+          const accessibleMenus = ["환자접수", "진료실"].filter(menu => checkAccess(menu, role));
+          
+          if (accessibleMenus.length > 0) {
+            setActiveMenu(accessibleMenus[0]);
+          }
+        }
+      } catch (error) {
+        console.error("역할을 가져오는데 실패했습니다:", error);
+      }
+    };
+    fetchRole();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const ensureHistory = useCallback(async () => {
     if (!clinicVisit) {
@@ -98,6 +145,10 @@ export default function DashboardPage() {
   }, [clinicVisit, defaultDeptId, employeeId]);
 
   const handleMenuChange = (menuId: string) => {
+    if (!canAccessMenu(menuId)) {
+      alert("접근 권한이 없습니다.");
+      return;
+    }
     setActiveMenu(menuId);
   };
 
@@ -330,7 +381,12 @@ export default function DashboardPage() {
       <Header />
 
       <div className={styles.mainWrapper}>
-        <Sidebar activeMenu={activeMenu} onMenuChange={handleMenuChange} />
+        <Sidebar 
+          activeMenu={activeMenu} 
+          onMenuChange={handleMenuChange}
+          userRole={userRole}
+          canAccessMenu={canAccessMenu}
+        />
 
         <main className={styles.mainContent}>
           <ActionBar 
