@@ -54,7 +54,7 @@ export default function DashboardPage() {
     if (!userRole) return false;
     
     if (menuId === "환자접수") {
-      return userRole === Role.SUPER_USER || userRole === Role.RECEPTIONIST;
+      return userRole === Role.SUPER_USER || userRole === Role.RECEPTIONIST || userRole === Role.NURSE;
     } else if (menuId === "진료실") {
       return userRole === Role.SUPER_USER || userRole === Role.DOCTOR;
     }
