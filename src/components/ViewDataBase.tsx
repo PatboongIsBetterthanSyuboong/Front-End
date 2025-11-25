@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type KeyboardEvent, type UIEvent } from "react";
 import { useMedicalSelection } from "@store/medicalSelection";
 import { get } from "@/services";
+import type { PaginatedResponse } from "@/types/api";
 import styles from "./ViewDataBase.module.css";
 
 type ActiveTab = "disease" | "diagnose";
@@ -21,49 +22,97 @@ interface DiagnoseItem extends DiseaseItem {
 
 type ResultItem = DiseaseItem | DiagnoseItem;
 
+const PAGE_SIZE = 50;
+
 export default function ViewDataBase() {
   const [activeTab, setActiveTab] = useState<ActiveTab>("disease");
   const [diseases, setDiseases] = useState<DiseaseItem[]>([]);
   const [diagnoses, setDiagnoses] = useState<DiagnoseItem[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [diseaseLoading, setDiseaseLoading] = useState(false);
+  const [diagnoseLoading, setDiagnoseLoading] = useState(false);
+  const [diseaseAppending, setDiseaseAppending] = useState(false);
+  const [diagnoseAppending, setDiagnoseAppending] = useState(false);
+  const [diseasePage, setDiseasePage] = useState(-1);
+  const [diagnosePage, setDiagnosePage] = useState(-1);
+  const [diseaseHasMore, setDiseaseHasMore] = useState(true);
+  const [diagnoseHasMore, setDiagnoseHasMore] = useState(true);
+  const [errors, setErrors] = useState<Record<ActiveTab, string | null>>({
+    disease: null,
+    diagnose: null,
+  });
   const { addDisease, addDiagnosis } = useMedicalSelection();
 
-  const fetchDiseases = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  const fetchDiseases = useCallback(async (pageToLoad = 0) => {
+    const isInitialLoad = pageToLoad === 0;
+    if (isInitialLoad) {
+      setDiseaseLoading(true);
+    } else {
+      setDiseaseAppending(true);
+    }
+    setErrors((prev) => ({ ...prev, disease: null }));
     try {
-      const response = await get<DiseaseItem[]>("/api/diseases");
-      setDiseases(response);
+      const response = await get<PaginatedResponse<DiseaseItem>>("/api/diseases", {
+        params: { page: pageToLoad, size: PAGE_SIZE },
+      });
+      setDiseases((prev) => (isInitialLoad ? response.items : [...prev, ...response.items]));
+      setDiseasePage(response.page);
+      const totalLoaded = response.page * response.pageSize + response.items.length;
+      setDiseaseHasMore(totalLoaded < response.total);
     } catch (err) {
       console.error("Failed to load diseases", err);
-      setError("상병 정보를 불러오지 못했습니다.");
+      setErrors((prev) => ({ ...prev, disease: "상병 정보를 불러오지 못했습니다." }));
     } finally {
-      setLoading(false);
+      if (isInitialLoad) {
+        setDiseaseLoading(false);
+      } else {
+        setDiseaseAppending(false);
+      }
     }
   }, []);
 
-  const fetchDiagnoses = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  const fetchDiagnoses = useCallback(async (pageToLoad = 0) => {
+    const isInitialLoad = pageToLoad === 0;
+    if (isInitialLoad) {
+      setDiagnoseLoading(true);
+    } else {
+      setDiagnoseAppending(true);
+    }
+    setErrors((prev) => ({ ...prev, diagnose: null }));
     try {
-      const response = await get<DiagnoseItem[]>("/api/diagnoses");
-      setDiagnoses(response);
+      const response = await get<PaginatedResponse<DiagnoseItem>>("/api/diagnoses", {
+        params: { page: pageToLoad, size: PAGE_SIZE },
+      });
+      setDiagnoses((prev) => (isInitialLoad ? response.items : [...prev, ...response.items]));
+      setDiagnosePage(response.page);
+      const totalLoaded = response.page * response.pageSize + response.items.length;
+      setDiagnoseHasMore(totalLoaded < response.total);
     } catch (err) {
       console.error("Failed to load diagnoses", err);
-      setError("진단 정보를 불러오지 못했습니다.");
+      setErrors((prev) => ({ ...prev, diagnose: "진단 정보를 불러오지 못했습니다." }));
     } finally {
-      setLoading(false);
+      if (isInitialLoad) {
+        setDiagnoseLoading(false);
+      } else {
+        setDiagnoseAppending(false);
+      }
     }
   }, []);
 
   useEffect(() => {
-    if (activeTab === "disease" && diseases.length === 0) {
-      void fetchDiseases();
-    } else if (activeTab === "diagnose" && diagnoses.length === 0) {
-      void fetchDiagnoses();
+    if (activeTab === "disease" && diseases.length === 0 && !diseaseLoading) {
+      void fetchDiseases(0);
+    } else if (activeTab === "diagnose" && diagnoses.length === 0 && !diagnoseLoading) {
+      void fetchDiagnoses(0);
     }
-  }, [activeTab, diseases.length, diagnoses.length, fetchDiseases, fetchDiagnoses]);
+  }, [
+    activeTab,
+    diseases.length,
+    diagnoses.length,
+    diseaseLoading,
+    diagnoseLoading,
+    fetchDiseases,
+    fetchDiagnoses,
+  ]);
 
   const itemsToRender = useMemo<ResultItem[]>(() => {
     if (activeTab === "disease") {
@@ -71,6 +120,11 @@ export default function ViewDataBase() {
     }
     return diagnoses;
   }, [activeTab, diseases, diagnoses]);
+
+  const isInitialLoading = activeTab === "disease" ? diseaseLoading : diagnoseLoading;
+  const isAppendLoading = activeTab === "disease" ? diseaseAppending : diagnoseAppending;
+  const activeHasMore = activeTab === "disease" ? diseaseHasMore : diagnoseHasMore;
+  const activeError = errors[activeTab];
 
   const handleTabChange = (tab: ActiveTab) => {
     if (tab !== activeTab) {
@@ -105,6 +159,40 @@ export default function ViewDataBase() {
     [handleItemDoubleClick]
   );
 
+  const handleScroll = useCallback(
+    (event: UIEvent<HTMLDivElement>) => {
+      const { scrollTop, clientHeight, scrollHeight } = event.currentTarget;
+      if (scrollHeight - (scrollTop + clientHeight) > 40) {
+        return;
+      }
+
+      if (activeTab === "disease") {
+        if (!diseaseHasMore || diseaseLoading || diseaseAppending) {
+          return;
+        }
+        void fetchDiseases(diseasePage + 1);
+      } else {
+        if (!diagnoseHasMore || diagnoseLoading || diagnoseAppending) {
+          return;
+        }
+        void fetchDiagnoses(diagnosePage + 1);
+      }
+    },
+    [
+      activeTab,
+      diseaseHasMore,
+      diagnoseHasMore,
+      diseaseLoading,
+      diagnoseLoading,
+      diseaseAppending,
+      diagnoseAppending,
+      diseasePage,
+      diagnosePage,
+      fetchDiseases,
+      fetchDiagnoses,
+    ]
+  );
+
   return (
     <div className={styles.container}>
       <div className={styles.header}>
@@ -116,9 +204,9 @@ export default function ViewDataBase() {
             type="text"
             placeholder="상병명 또는 진단명으로 검색"
             className={styles.searchInput}
-            disabled={loading}
+            disabled={isInitialLoading}
           />
-          <button className={styles.searchButton} disabled={loading}>
+          <button className={styles.searchButton} disabled={isInitialLoading}>
             검색
           </button>
         </div>
@@ -128,7 +216,7 @@ export default function ViewDataBase() {
             className={`${styles.tab} ${activeTab === "disease" ? styles.active : ""}`}
             onClick={() => handleTabChange("disease")}
             type="button"
-            disabled={loading && activeTab !== "disease"}
+            disabled={isInitialLoading && activeTab !== "disease"}
           >
             상병
           </button>
@@ -136,21 +224,21 @@ export default function ViewDataBase() {
             className={`${styles.tab} ${activeTab === "diagnose" ? styles.active : ""}`}
             onClick={() => handleTabChange("diagnose")}
             type="button"
-            disabled={loading && activeTab !== "diagnose"}
+            disabled={isInitialLoading && activeTab !== "diagnose"}
           >
             진단
           </button>
         </div>
 
         <div className={styles.resultSection}>
-          {error ? (
-            <div className={styles.errorMessage}>{error}</div>
-          ) : loading && itemsToRender.length === 0 ? (
+          {activeError && itemsToRender.length === 0 ? (
+            <div className={styles.errorMessage}>{activeError}</div>
+          ) : isInitialLoading && itemsToRender.length === 0 ? (
             <div className={styles.loadingMessage}>불러오는 중...</div>
           ) : itemsToRender.length === 0 ? (
             <div className={styles.emptyMessage}>표시할 데이터가 없습니다.</div>
           ) : (
-            <div className={styles.resultList}>
+            <div className={styles.resultList} onScroll={handleScroll}>
               {itemsToRender.map((item) => (
                 <div
                   key={item.id}
@@ -165,6 +253,11 @@ export default function ViewDataBase() {
                   <div className={styles.resultName}>{item.name}</div>
                 </div>
               ))}
+              {isAppendLoading ? (
+                <div className={styles.appendLoader}>추가 불러오는 중...</div>
+              ) : !activeHasMore ? (
+                <div className={styles.appendLoader}>마지막 페이지입니다.</div>
+              ) : null}
             </div>
           )}
         </div>
