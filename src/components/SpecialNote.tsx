@@ -4,7 +4,7 @@ import styles from "./SpecialNote.module.css";
 
 export default function SpecialNote() {
   const specialNotes = [
-    "특이사항 없읍니다!"
+    "특이사항 없음."
   ];
 
   return (
