@@ -25,5 +25,5 @@
     "eslint-import-resolver-typescript": "^4.4.4",
     "typescript": "^5"
   },
-  "packageManager": "yarn@4.10.3"
+  "packageManager": "yarn@4.12.0"
 }
