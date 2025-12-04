@@ -151,6 +151,39 @@
   background-color: #9ca3af;
 }
 
+.resultImageSection {
+  flex: 1;
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.resultTextSection {
+  padding: 12px 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: auto;
+  height: auto;
+}
+
+.resultLabel {
+  font-size: 14px;
+  color: #374151;
+  font-weight: 500;
+}
+
+.resultValue {
+  font-size: 14px;
+  color: #dc2626;
+  font-weight: 600;
+}
+
 .resultSection {
   flex: 1;
   min-height: 150px;
