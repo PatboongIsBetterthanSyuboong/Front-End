@@ -13,7 +13,8 @@ interface SidebarProps {
 export default function Sidebar({ activeMenu, onMenuChange, userRole, canAccessMenu }: SidebarProps) {
   const menuItems = [
     { id: "환자접수", label: "환자 접수", shortLabel: "접수"},
-    { id: "진료실", label: "진료실", shortLabel: "진료"}
+    { id: "진료실", label: "진료실", shortLabel: "진료"},
+    { id: "진단서", label: "진단서", shortLabel: "진단서"},
   ];
 
   return (

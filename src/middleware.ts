@@ -7,8 +7,12 @@ export function middleware(request: NextRequest) {
 
   if (url.pathname === "/") {
     const target = token ? "/dashboard" : "/login";
-    if (url.pathname !== target) {
-      return NextResponse.redirect(new URL(target, url));
+    return NextResponse.redirect(new URL(target, url));
+  }
+
+  if (url.pathname.startsWith("/dashboard")) {
+    if (!token) {
+      return NextResponse.redirect(new URL("/login", url));
     }
   }
 
@@ -16,7 +20,7 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/"],
+  matcher: ["/", "/dashboard/:path*"],
 };
 
 

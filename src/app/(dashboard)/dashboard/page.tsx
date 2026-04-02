@@ -22,6 +22,10 @@ import { Role } from "@/types/user";
 import { getRole } from "@/services/auth";
 import styles from "./page.module.css";
 import { createHistory } from "@/services/history";
+import MedicalCertificate from "@/components/MedicalCertificate";
+import CertificatePatientSearch from "@/components/CertificatePatientSearch";
+import CertificateList, { CertificateItem } from "@/components/CertificateList";
+import CertificateBottom from "@/components/CertificateBottom";
 
 function formatLocalDate(date: Date) {
   const year = date.getFullYear();
@@ -39,6 +43,7 @@ export default function DashboardPage() {
   const patientFormRef = useRef<PatientFormRef>(null);
   const medicalInfoRef = useRef<MedicalInfoRef>(null);
   const [userRole, setUserRole] = useState<Role | null>(null);
+  const [selectedCertificate, setSelectedCertificate] = useState<CertificateItem | null>(null);
 
   const employeeId = Number(process.env.NEXT_PUBLIC_EMPLOYEE_ID ?? "1") || 1;
   const defaultDeptId = Number(process.env.NEXT_PUBLIC_DEFAULT_DEPT_ID ?? "1") || 1;
@@ -57,6 +62,8 @@ export default function DashboardPage() {
       return userRole === Role.SUPER_USER || userRole === Role.RECEPTIONIST || userRole === Role.NURSE;
     } else if (menuId === "진료실") {
       return userRole === Role.SUPER_USER || userRole === Role.DOCTOR;
+    } else if (menuId === "진단서") {
+      return userRole === Role.SUPER_USER || userRole === Role.DOCTOR;
     }
     return false;
   }, [userRole]);
@@ -74,12 +81,14 @@ export default function DashboardPage() {
             return userRole === Role.SUPER_USER || userRole === Role.RECEPTIONIST;
           } else if (menuId === "진료실") {
             return userRole === Role.SUPER_USER || userRole === Role.DOCTOR;
+          } else if (menuId === "진단서") {
+            return userRole === Role.SUPER_USER || userRole === Role.DOCTOR;
           }
           return false;
         };
-        
+
         if (!checkAccess(activeMenu, role)) {
-          const accessibleMenus = ["환자접수", "진료실"].filter(menu => checkAccess(menu, role));
+          const accessibleMenus = ["환자접수", "진료실", "진단서"].filter(menu => checkAccess(menu, role));
           
           if (accessibleMenus.length > 0) {
             setActiveMenu(accessibleMenus[0]);
@@ -373,12 +382,30 @@ export default function DashboardPage() {
           </div>
         </MedicalSelectionProvider>
       );
+    } else if (activeMenu === "진단서") {
+      return (
+        <div className={styles.contentGridCertificate}>
+          <div className={styles.leftColumn}>
+            <CertificatePatientSearch />
+          </div>
+          <div className={styles.certificateCenterColumn}>
+            <CertificateList
+              selected={selectedCertificate}
+              onSelect={setSelectedCertificate}
+            />
+            <CertificateBottom />
+          </div>
+          <div className={styles.certificateRightColumn}>
+            <MedicalCertificate selected={selectedCertificate} />
+          </div>
+        </div>
+      );
     }
   };
 
   return (
     <div className={styles.container}>
-      <Header />
+      <Header activeMenu={activeMenu} />
 
       <div className={styles.mainWrapper}>
         <Sidebar 

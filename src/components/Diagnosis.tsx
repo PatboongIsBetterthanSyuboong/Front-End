@@ -63,6 +63,13 @@ export default function Diagnosis({ clinicVisit, ensureHistory, employeeId, onHi
         <div className={styles.controls}>
           <button
             type="button"
+            className={styles.controlButtonAI}
+            onClick={() => {}}
+          >
+            AI 생성
+          </button>
+          <button
+            type="button"
             className={styles.controlButton}
             onClick={handleSave}
             disabled={diagnoses.length === 0 || saving}

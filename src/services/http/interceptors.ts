@@ -23,6 +23,11 @@ export function attachInterceptors(instance: AxiosInstance, getToken?: TokenGett
       const data = error.response?.data as unknown;
       const message =
         (typeof data === "object" && data && (data as any).message) || error.message || "HTTP Error";
+
+      if (status === 401 && typeof window !== "undefined") {
+        window.location.href = "/login";
+      }
+
       throw new HttpError(message, status, data);
     }
   );

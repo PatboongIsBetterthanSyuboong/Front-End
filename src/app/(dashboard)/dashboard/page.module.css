@@ -94,6 +94,27 @@
   }
 }
 
+.contentGridCertificate {
+  display: grid;
+  grid-template-columns: 320px 1fr 680px;
+  gap: 16px;
+  height: 100%;
+  min-height: 600px;
+}
+
+.certificateCenterColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 100%;
+}
+
+.certificateRightColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
 .clinicMiddleColumn {
   display: flex;
   flex-direction: column;

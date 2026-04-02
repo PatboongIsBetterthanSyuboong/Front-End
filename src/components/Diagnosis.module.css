@@ -28,6 +28,7 @@
 }
 
 .controlButton,
+.controlButtonAI,
 .controlButtonSecondary {
   padding: 6px 12px;
   font-size: 13px;
@@ -46,6 +47,15 @@
   background: #1d4ed8;
 }
 
+.controlButtonAI {
+  background: #7c3aed;
+  color: white;
+}
+
+.controlButtonAI:hover {
+  background: #6d28d9;
+}
+
 .controlButtonSecondary {
   background: #4b5563;
   color: #f3f4f6;
@@ -56,6 +66,7 @@
 }
 
 .controlButton:disabled,
+.controlButtonAI:disabled,
 .controlButtonSecondary:disabled {
   opacity: 0.5;
   cursor: not-allowed;
