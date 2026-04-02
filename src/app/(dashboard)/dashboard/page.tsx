@@ -377,7 +377,12 @@ export default function DashboardPage() {
             {/* Right Column - ViewDataBase & AIReport */}
             <div className={styles.clinicRightColumn}>
               <ViewDataBase />
-              <AIReport />
+              <AIReport 
+                patientId={clinicPatientId}
+                employeeId={employeeId}
+                deptId={clinicVisit?.deptId ?? defaultDeptId}
+                entryDate={clinicVisit?.entryDate ? formatLocalDate(new Date(clinicVisit.entryDate)) : undefined}
+              />
             </div>
           </div>
         </MedicalSelectionProvider>
