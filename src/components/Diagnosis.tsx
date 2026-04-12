@@ -12,7 +12,6 @@ import {
 } from "@/services/agent";
 import { fetchDiagnoseMasterByCode, fetchFirstDiagnoseMasterId } from "@/services/diagnoses";
 import { HttpError } from "@/services/http/types";
-import { setAccessToken, setRefreshToken } from "@/lib/auth/token";
 
 type DiagnosisProps = {
   clinicVisit: ClinicVisitContext | null;
@@ -49,17 +48,12 @@ function normalizeRecommendations(res: PrescriptionRecommendResponse): Recommend
   const out: RecommendedPrescriptionItem[] = [];
   for (const row of raw) {
     if (row && typeof row === "object") {
-      const item = coerceRecommendedItem(row as Record<string, unknown>);
+      const item = coerceRecommendedItem(row as unknown as Record<string, unknown>);
       if (item) out.push(item);
     }
     if (out.length >= 3) break;
   }
   return out;
-}
-
-function applyRecommendTokens(data: PrescriptionRecommendResponse): void {
-  if (data.accessToken) setAccessToken(data.accessToken);
-  if (data.refreshToken) setRefreshToken(data.refreshToken);
 }
 
 export default function Diagnosis({ clinicVisit, ensureHistory, employeeId, onHistoryUpdated }: DiagnosisProps) {
@@ -131,7 +125,6 @@ export default function Diagnosis({ clinicVisit, ensureHistory, employeeId, onHi
       }
 
       const recRes = await recommendPrescription({ history_diagnose_id: historyDiagnoseId });
-      applyRecommendTokens(recRes);
 
       const choices = normalizeRecommendations(recRes);
       if (choices.length === 0) {

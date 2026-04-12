@@ -65,12 +65,10 @@ export interface RecommendedPrescriptionItem {
   confidence_score: number;
 }
 
-/** 백엔드 직렬화(camelCase / snake_case) 모두 허용 */
+/** 백엔드 직렬화(camelCase / snake_case) 모두 허용. 인증은 로그인·JWT와 동일 */
 export type PrescriptionRecommendResponse = {
-  grantType?: string;
-  accessToken?: string;
-  refreshToken?: string;
   history_diagnose_id?: number;
+  patient_id?: number;
   /** 오타 대비 */
   history_dignose_id?: number;
   recommended_prescriptions?: RecommendedPrescriptionItem[];
@@ -133,7 +131,7 @@ export async function recommendPrescription(
       body
     );
   } catch {
-    // 네트워크/404/스펙 불일치 등 — 토큰·기타 필드 없이 더미 추천만 사용
+    // 네트워크/404/스펙 불일치 등 — 더미 추천만 사용
   }
 
   const dummyList = await buildLocalDummyRecommendedPrescriptions();

@@ -293,7 +293,7 @@ export default function MedicalCertificate({
       formData.append("historyId", String(historyId));
       formData.append("pdfFile", pdfFile);
       formData.append("agentUsed", String(agentUsed));
-      formData.append("originalMedicalCerificate", originalMedicalCertificate);
+      formData.append("originalMedicalCertificate", originalMedicalCertificate);
       formData.append("savedMedicalCertificate", savedMedicalCertificate);
       formData.append("feedbackType", feedbackType);
 
