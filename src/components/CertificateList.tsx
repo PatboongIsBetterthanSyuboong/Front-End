@@ -2,8 +2,13 @@
 
 import styles from "./CertificateList.module.css";
 
+export type CertificateType = "general" | "military";
+
 export interface CertificateItem {
   id: number;
+  type: CertificateType;
+  label: string;
+  pdfPath: string;
   patientNumber: string;
   patientName: string;
   age: number;
@@ -17,8 +22,33 @@ interface CertificateListProps {
   onSelect: (item: CertificateItem) => void;
 }
 
-// TODO: API 연동 시 교체
-const MOCK_CERTIFICATES: CertificateItem[] = [];
+// TODO: API 연동 시 환자별 진단서 목록으로 교체
+const MOCK_CERTIFICATES: CertificateItem[] = [
+  {
+    id: 1,
+    type: "general",
+    label: "일반 진단서",
+    pdfPath: "/certificates/general.pdf",
+    patientNumber: "-",
+    patientName: "-",
+    age: 0,
+    department: "-",
+    doctor: "-",
+    issueDate: "-",
+  },
+  {
+    id: 2,
+    type: "military",
+    label: "병무용 진단서",
+    pdfPath: "/certificates/military.pdf",
+    patientNumber: "-",
+    patientName: "-",
+    age: 0,
+    department: "-",
+    doctor: "-",
+    issueDate: "-",
+  },
+];
 
 export default function CertificateList({ selected, onSelect }: CertificateListProps) {
   return (
@@ -29,43 +59,16 @@ export default function CertificateList({ selected, onSelect }: CertificateListP
       </div>
 
       <div className={styles.body}>
-        <div className={styles.tableContainer}>
-          <table className={styles.table}>
-            <thead>
-              <tr className={styles.tableHeader}>
-                <th>환자번호</th>
-                <th>이름</th>
-                <th>나이</th>
-                <th>진료과</th>
-                <th>진료의</th>
-                <th>발급일</th>
-              </tr>
-            </thead>
-            <tbody>
-              {MOCK_CERTIFICATES.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className={styles.empty}>
-                    조회 결과가 없습니다.
-                  </td>
-                </tr>
-              ) : (
-                MOCK_CERTIFICATES.map((item) => (
-                  <tr
-                    key={item.id}
-                    className={`${styles.row} ${selected?.id === item.id ? styles.selectedRow : ""}`}
-                    onClick={() => onSelect(item)}
-                  >
-                    <td>{item.patientNumber}</td>
-                    <td>{item.patientName}</td>
-                    <td>{item.age}</td>
-                    <td>{item.department}</td>
-                    <td>{item.doctor}</td>
-                    <td>{item.issueDate}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+        <div className={styles.listContainer}>
+          {MOCK_CERTIFICATES.map((item) => (
+            <div
+              key={item.id}
+              className={`${styles.listItem} ${selected?.id === item.id ? styles.selectedItem : ""}`}
+              onClick={() => onSelect(item)}
+            >
+              <span className={styles.itemLabel}>{item.label}</span>
+            </div>
+          ))}
         </div>
       </div>
     </div>

@@ -192,3 +192,118 @@
   padding: 24px 16px;
   color: #9ca3af;
 }
+
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  padding: 16px;
+}
+
+.modalPanel {
+  width: min(560px, 100%);
+  max-height: min(90vh, 640px);
+  overflow: auto;
+  background: #2f2f2f;
+  border: 1px solid #4b5563;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+}
+
+.modalTitle {
+  margin: 0 0 16px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #f3f4f6;
+}
+
+.modalList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.modalCard {
+  background: #1f2937;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+.modalCardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.modalRank {
+  font-weight: 700;
+  color: #a78bfa;
+  font-size: 14px;
+}
+
+.modalScore {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.modalCode {
+  font-family: ui-monospace, monospace;
+  font-size: 13px;
+  color: #f9d14c;
+  margin-bottom: 4px;
+}
+
+.modalName {
+  font-size: 14px;
+  color: #f3f4f6;
+  margin-bottom: 6px;
+}
+
+.modalReason {
+  margin: 0 0 10px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #d1d5db;
+}
+
+.modalSelectBtn {
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  background: #7c3aed;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.modalSelectBtn:hover {
+  background: #6d28d9;
+}
+
+.modalCloseBtn {
+  margin-top: 16px;
+  width: 100%;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #4b5563;
+  background: transparent;
+  color: #e5e7eb;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.modalCloseBtn:hover {
+  background: #374151;
+}

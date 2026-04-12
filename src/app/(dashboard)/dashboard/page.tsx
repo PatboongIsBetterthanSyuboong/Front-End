@@ -23,7 +23,7 @@ import { getRole } from "@/services/auth";
 import styles from "./page.module.css";
 import { createHistory } from "@/services/history";
 import MedicalCertificate from "@/components/MedicalCertificate";
-import CertificatePatientSearch from "@/components/CertificatePatientSearch";
+import CertificatePatientSearch, { CertificatePatientInfo } from "@/components/CertificatePatientSearch";
 import CertificateList, { CertificateItem } from "@/components/CertificateList";
 import CertificateBottom from "@/components/CertificateBottom";
 
@@ -44,6 +44,12 @@ export default function DashboardPage() {
   const medicalInfoRef = useRef<MedicalInfoRef>(null);
   const [userRole, setUserRole] = useState<Role | null>(null);
   const [selectedCertificate, setSelectedCertificate] = useState<CertificateItem | null>(null);
+  const [certificatePatient, setCertificatePatient] = useState<CertificatePatientInfo | null>(null);
+  const [certificateDiagnosisApply, setCertificateDiagnosisApply] = useState<{
+    key: number;
+    text: string;
+    historyId: number;
+  } | null>(null);
 
   const employeeId = Number(process.env.NEXT_PUBLIC_EMPLOYEE_ID ?? "1") || 1;
   const defaultDeptId = Number(process.env.NEXT_PUBLIC_DEFAULT_DEPT_ID ?? "1") || 1;
@@ -160,6 +166,21 @@ export default function DashboardPage() {
     }
     setActiveMenu(menuId);
   };
+
+  const applyCertificateDiagnosis = useCallback(
+    (payload: { text: string; historyId: number }) => {
+      setCertificateDiagnosisApply((prev) => ({
+        key: (prev?.key ?? 0) + 1,
+        text: payload.text,
+        historyId: payload.historyId,
+      }));
+    },
+    []
+  );
+
+  useEffect(() => {
+    setCertificateDiagnosisApply(null);
+  }, [certificatePatient?.patientId]);
 
   const handlePatientSelection = useCallback(
     (patient: PatientInfo | null, visit?: WaitingVisitContext) => {
@@ -391,17 +412,25 @@ export default function DashboardPage() {
       return (
         <div className={styles.contentGridCertificate}>
           <div className={styles.leftColumn}>
-            <CertificatePatientSearch />
+            <CertificatePatientSearch onPatientFound={setCertificatePatient} />
           </div>
           <div className={styles.certificateCenterColumn}>
             <CertificateList
               selected={selectedCertificate}
               onSelect={setSelectedCertificate}
             />
-            <CertificateBottom />
+            <CertificateBottom
+              patientId={certificatePatient?.patientId}
+              employeeId={employeeId}
+              onApplyDiagnosisToCertificate={applyCertificateDiagnosis}
+            />
           </div>
           <div className={styles.certificateRightColumn}>
-            <MedicalCertificate selected={selectedCertificate} />
+            <MedicalCertificate
+              selected={selectedCertificate}
+              patientInfo={certificatePatient}
+              diagnosisApply={certificateDiagnosisApply}
+            />
           </div>
         </div>
       );
