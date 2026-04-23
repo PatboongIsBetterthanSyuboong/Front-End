@@ -10,6 +10,7 @@ import {
   HttpError,
   saveDocumentCertificate,
 } from "@/services";
+import { getHistoryDiagnoses, getHistoryDiseases } from "@/services/history";
 import styles from "./MedicalCertificate.module.css";
 import { CertificateItem, CertificateType } from "./CertificateList";
 import type { CertificatePatientInfo } from "./CertificatePatientSearch";
@@ -107,6 +108,7 @@ export interface CertificateDiagnosisApply {
 interface MedicalCertificateProps {
   selected: CertificateItem | null;
   patientInfo: CertificatePatientInfo | null;
+  employeeId: number;
   /** 상병 패널에서 보낸 적용 요청; `key`가 바뀔 때마다 병명(상병명) 필드에 반영 */
   diagnosisApply?: CertificateDiagnosisApply | null;
 }
@@ -114,6 +116,7 @@ interface MedicalCertificateProps {
 export default function MedicalCertificate({
   selected,
   patientInfo,
+  employeeId,
   diagnosisApply = null,
 }: MedicalCertificateProps) {
   const [fieldValues, setFieldValues] = useState<Record<CertificateType, FieldValues>>({
@@ -202,7 +205,28 @@ export default function MedicalCertificate({
     }
     setAiGenerating(true);
     try {
-      const res = await generateDocumentCertificate({ historyId });
+      const [diseases, diagnoses] = await Promise.all([
+        getHistoryDiseases(historyId, employeeId),
+        getHistoryDiagnoses(historyId, employeeId),
+      ]);
+      const diseaseCode = diseases
+        .map((item) => item.code.trim())
+        .filter(Boolean)
+        .join(",");
+      const prescriptionCode = diagnoses
+        .map((item) => item.code.trim())
+        .filter(Boolean)
+        .join(",");
+      const prescriptionName = diagnoses
+        .map((item) => item.name.trim())
+        .filter(Boolean)
+        .join(",");
+
+      const res = await generateDocumentCertificate({
+        diseaseCode,
+        prescriptionCode,
+        prescriptionName,
+      });
       const text = res.medicalCertificate ?? res.medical_certificate ?? "";
       setResolvedAiRound(null);
       setAiPreviewModal({ text });

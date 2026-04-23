@@ -3,7 +3,28 @@ import { http, post } from "./http/client";
 import { fetchDiagnosesPage } from "./diagnoses";
 
 export interface DocumentGenerateRequest {
-  historyId: number;
+  diseaseCode: string;
+  prescriptionCode: string;
+  prescriptionName: string;
+}
+
+export interface DocumentEvaluateRequest {
+  medicalCertificate: string;
+}
+
+export interface DocumentEvaluateDetail {
+  index: number;
+  hypothesis: string;
+  judgment: string;
+  reason: string;
+}
+
+export interface DocumentEvaluateResponse {
+  score: number;
+  entailmentCount: number;
+  totalPairs: number;
+  premise: string;
+  details: DocumentEvaluateDetail[];
 }
 
 export interface DocumentGenerateResponse {
@@ -20,7 +41,16 @@ export async function generateDocumentCertificate(
   body: DocumentGenerateRequest
 ): Promise<DocumentGenerateResponse> {
   return post<DocumentGenerateResponse, DocumentGenerateRequest>(
-    "/api/agent/document/generate",
+    "/api/agent/document/generate-test",
+    body
+  );
+}
+
+export async function evaluateDocumentCertificate(
+  body: DocumentEvaluateRequest
+): Promise<DocumentEvaluateResponse> {
+  return post<DocumentEvaluateResponse, DocumentEvaluateRequest>(
+    "/api/agent/document/evaluate",
     body
   );
 }
