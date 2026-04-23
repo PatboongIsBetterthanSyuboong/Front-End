@@ -19,7 +19,7 @@ import TimeLine from "@/components/TimeLine";
 import { MedicalSelectionProvider } from "@store/medicalSelection";
 import { ClinicVisitContext } from "@/types/clinic";
 import { Role } from "@/types/user";
-import { getRole } from "@/services/auth";
+import { getMe, getRole } from "@/services/auth";
 import styles from "./page.module.css";
 import { createHistory } from "@/services/history";
 import MedicalCertificate from "@/components/MedicalCertificate";
@@ -51,7 +51,8 @@ export default function DashboardPage() {
     historyId: number;
   } | null>(null);
 
-  const employeeId = Number(process.env.NEXT_PUBLIC_EMPLOYEE_ID ?? "1") || 1;
+  const envEmployeeId = Number(process.env.NEXT_PUBLIC_EMPLOYEE_ID ?? "1") || 1;
+  const [employeeId, setEmployeeId] = useState<number>(envEmployeeId);
   const defaultDeptId = Number(process.env.NEXT_PUBLIC_DEFAULT_DEPT_ID ?? "1") || 1;
   const selectedPatientId = (() => {
     if (!selectedPatient?.patientId) return undefined;
@@ -78,8 +79,11 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchRole = async () => {
       try {
-        const role = await getRole();
+        const [role, me] = await Promise.all([getRole(), getMe()]);
         setUserRole(role);
+        if (me?.id && me.id > 0) {
+          setEmployeeId(me.id);
+        }
         
         // 현재 선택된 메뉴에 접근 권한이 없으면 접근 가능한 첫 번째 메뉴로 변경
         const checkAccess = (menuId: string, userRole: Role): boolean => {
@@ -111,6 +115,10 @@ export default function DashboardPage() {
   const ensureHistory = useCallback(async () => {
     if (!clinicVisit) {
       throw new Error("선택된 환자 정보가 없습니다.");
+    }
+
+    if (!employeeId || employeeId <= 0) {
+      throw new Error("유효한 의료진 ID를 확인할 수 없습니다. 다시 로그인 후 시도해주세요.");
     }
 
     if (clinicVisit.historyId) {
@@ -201,6 +209,7 @@ export default function DashboardPage() {
 
       setClinicVisit({
         patientId: patientIdNumber,
+        visitNumber: patient.visitNumber,
         deptId: visit?.deptId ?? defaultDeptId,
         waitingId: visit?.waitingId,
         entryDate: visit?.entryDate,
@@ -237,9 +246,10 @@ export default function DashboardPage() {
       !patientData.name ||
       !patientData.birthDate ||
       !patientData.phone ||
-      !patientData.identityNumber
+      !patientData.identityNumber ||
+      !patientData.visitNumber
     ) {
-      alert("환자 정보의 필수 항목(환자명, 생년월일, 연락처, 주민등록번호)을 입력해주세요.");
+      alert("환자 정보의 필수 항목(환자명, 생년월일, 연락처, 주민등록번호, 내원번호)을 입력해주세요.");
       return;
     }
 
@@ -260,6 +270,7 @@ export default function DashboardPage() {
         name: patientData.name,
         phoneNumber: patientData.phone,
         identityNumber: patientData.identityNumber,
+        visitNumber: patientData.visitNumber,
         birth: patientData.birthDate,
         gender: patientData.gender,
       };

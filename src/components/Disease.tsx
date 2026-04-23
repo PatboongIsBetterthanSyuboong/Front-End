@@ -14,8 +14,14 @@ type DiseaseProps = {
   onHistoryUpdated?: () => void;
 };
 
+const DUMMY_DISEASES = [
+  { id: 900001, code: "E11", name: "당뇨" },
+  { id: 900002, code: "E16.2", name: "저혈당" },
+  { id: 900003, code: "E03.9", name: "갑상선 저하증" },
+] as const;
+
 export default function Disease({ clinicVisit, ensureHistory, employeeId, onHistoryUpdated }: DiseaseProps) {
-  const { diseases, removeDisease, clearDiseases } = useMedicalSelection();
+  const { diseases, addDisease, removeDisease, clearDiseases } = useMedicalSelection();
   const [saving, setSaving] = useState(false);
   const prevPatientIdRef = useRef<number | null>(null);
 
@@ -79,6 +85,21 @@ export default function Disease({ clinicVisit, ensureHistory, employeeId, onHist
         </div>
       </div>
       <div className={styles.content}>
+        <div className={styles.quickSelect}>
+          <span className={styles.quickSelectLabel}>테스트 상병 빠른 선택</span>
+          <div className={styles.quickSelectButtons}>
+            {DUMMY_DISEASES.map((disease) => (
+              <button
+                key={disease.id}
+                type="button"
+                className={styles.quickSelectButton}
+                onClick={() => addDisease({ ...disease })}
+              >
+                {disease.name}
+              </button>
+            ))}
+          </div>
+        </div>
         <div className={styles.tableContainer}>
           <table className={styles.diseaseTable}>
             <thead>

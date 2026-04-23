@@ -44,6 +44,30 @@ export interface HistoryDiagnoseResponse {
   days: number;
 }
 
+export interface PrescriptionRecommendRequestPayload {
+  history_id?: number;
+  history_diagnose_id?: number;
+  arango_patient_id?: string;
+  use_example_context?: boolean;
+}
+
+export interface RecommendedPrescriptionItem {
+  id: number;
+  rank: number;
+  prescription_code: string;
+  prescription_name: string;
+  reason: string;
+  confidence_score: number;
+  dose: number;
+  time: number;
+  days: number;
+}
+
+export interface PrescriptionRecommendResponse {
+  history_diagnose_id?: number;
+  recommended_prescriptions: RecommendedPrescriptionItem[];
+}
+
 export interface HistoryListResponse {
   patientId: number;
   histories: HistoryEntry[];
@@ -111,5 +135,14 @@ export async function getHistoryDiagnoses(
   return get<HistoryDiagnoseResponse[]>(`/api/histories/${historyId}/get_diagnoses`, {
     params: { employeeId },
   });
+}
+
+export async function recommendPrescriptions(
+  payload: PrescriptionRecommendRequestPayload
+): Promise<PrescriptionRecommendResponse> {
+  return post<PrescriptionRecommendResponse, PrescriptionRecommendRequestPayload>(
+    "/api/agent/prescription/recommend",
+    payload
+  );
 }
 

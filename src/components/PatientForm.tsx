@@ -7,6 +7,7 @@ interface PatientData {
   name: string;
   phoneNumber: string;
   identityNumber: string;
+  visitNumber: string;
   birth: string;
   gender: string;
 }
@@ -16,6 +17,7 @@ export type PatientFormData = {
   birthDate: string;
   phone: string;
   identityNumber: string;
+  visitNumber: string;
   gender: string;
   address: string;
   symptoms: string;
@@ -34,6 +36,7 @@ const PatientForm = forwardRef<PatientFormRef>((props, ref) => {
     birthDate: "",
     phone: "",
     identityNumber: "",
+    visitNumber: "",
     gender: "M",
     address: "",
     symptoms: "",
@@ -102,6 +105,7 @@ const PatientForm = forwardRef<PatientFormRef>((props, ref) => {
       birthDate: "",
       phone: "",
       identityNumber: "",
+      visitNumber: "",
       gender: "M",
       address: "",
       symptoms: "",
@@ -153,10 +157,11 @@ const PatientForm = forwardRef<PatientFormRef>((props, ref) => {
       !formData.name ||
       !formData.birthDate ||
       !formData.phone ||
-      !formData.identityNumber
+      !formData.identityNumber ||
+      !formData.visitNumber
     ) {
       alert(
-        "필수 정보(환자명, 생년월일, 연락처, 주민등록번호)를 입력해주세요."
+        "필수 정보(환자명, 생년월일, 연락처, 주민등록번호, 내원번호)를 입력해주세요."
       );
       return;
     }
@@ -168,6 +173,7 @@ const PatientForm = forwardRef<PatientFormRef>((props, ref) => {
         name: formData.name,
         phoneNumber: formData.phone,
         identityNumber: formData.identityNumber,
+        visitNumber: formData.visitNumber,
         birth: formData.birthDate,
         gender: formData.gender,
       };
@@ -204,10 +210,11 @@ const PatientForm = forwardRef<PatientFormRef>((props, ref) => {
       birthDate: "1990-01-01",
       phone: "010-1234-5678",
       identityNumber: "900101-1234567",
+      visitNumber: "530524502",
       gender: "M",
       address: "서울시 강남구 테헤란로 123",
-      symptoms: "두통, 발열",
-      notes: "테스트용 환자 데이터",
+      symptoms: "E11",
+      notes: "테스트용 환자 데이터 (상병 E11)",
     });
   };
 
@@ -288,6 +295,19 @@ const PatientForm = forwardRef<PatientFormRef>((props, ref) => {
             value={formData.identityNumber}
             onChange={handleChange}
             placeholder="000000-0000000"
+            className={styles.input}
+            required
+          />
+        </label>
+
+        <label className={styles.field}>
+          <span className={styles.label}>내원번호 *</span>
+          <input
+            type="text"
+            name="visitNumber"
+            value={formData.visitNumber}
+            onChange={handleChange}
+            placeholder="예: 530524502"
             className={styles.input}
             required
           />

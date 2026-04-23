@@ -312,6 +312,56 @@
   width: 80px;
 }
 
+.actionCell {
+  width: 120px;
+}
+
+.actionButtons {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+}
+
+.holdButton,
+.completeButton {
+  border: none;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.holdButton {
+  background: #f59e0b;
+  color: #111827;
+}
+
+.completeButton {
+  background: #10b981;
+  color: #ffffff;
+}
+
+.deleteButton {
+  border: none;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  background: #ef4444;
+  color: #ffffff;
+}
+
+.holdButton:disabled,
+.completeButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.deleteButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* 상태 배지 테이블용 조정 */
 .tableRow .statusBadge {
   display: inline-block;

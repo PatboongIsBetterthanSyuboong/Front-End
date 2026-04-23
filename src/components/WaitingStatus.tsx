@@ -23,6 +23,7 @@ interface PatientDetail {
   name: string;
   phoneNumber: string;
   identityNumber: string;
+  visitNumber?: string;
   birth: string;
   gender: string;
 }
@@ -192,6 +193,7 @@ export default function WaitingStatus({ onPatientSelect }: WaitingStatusProps = 
 
     const selectedPatient: PatientInfo = {
       patientId: waitingPatient.patientId.toString(),
+      visitNumber: patientInfo?.visitNumber,
       name: patientInfo?.name ?? waitingPatient.patientName,
       age: patientInfo?.birth ? calculateAgeWithMonths(patientInfo.birth) : "-",
       gender: patientInfo?.gender,
@@ -280,15 +282,13 @@ export default function WaitingStatus({ onPatientSelect }: WaitingStatusProps = 
   }, [contextMenu]);
 
   // 상태 변경 함수
-  const updatePatientStatus = async (patientId: number, newState: "hold" | "completed") => {
+  const updatePatientStatus = async (waitingId: number, newState: "hold" | "completed") => {
     try {
       let apiUrl = "";
       if (newState === "completed") {
-        // 진료 완료 API 호출
-        apiUrl = `http://localhost:8080/api/waiting/${patientId}/complete`;
+        apiUrl = `http://localhost:8080/api/waiting/entry/${waitingId}/complete`;
       } else if (newState === "hold") {
-        // 진료 보류 API 호출
-        apiUrl = `http://localhost:8080/api/waiting/${patientId}/hold`;
+        apiUrl = `http://localhost:8080/api/waiting/entry/${waitingId}/hold`;
       }
 
       const token = getAccessToken();
@@ -316,6 +316,44 @@ export default function WaitingStatus({ onPatientSelect }: WaitingStatusProps = 
       console.error("상태 변경 실패:", error);
       alert("상태 변경에 실패했습니다.");
     }
+  };
+
+  const deleteWaitingEntry = async (waitingId: number) => {
+    try {
+      const token = getAccessToken();
+      const headers: HeadersInit = {
+        "Content-Type": "application/json",
+      };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`http://localhost:8080/api/waiting/entry/${waitingId}`, {
+        method: "DELETE",
+        headers,
+      });
+
+      if (!response.ok) {
+        throw new Error(`내원 정보 삭제 실패: ${response.status}`);
+      }
+
+      await fetchWaitingList();
+    } catch (error) {
+      console.error("내원 정보 삭제 실패:", error);
+      alert("내원 정보 삭제에 실패했습니다.");
+    }
+  };
+
+  const handleQuickAction = async (
+    waitingId: number,
+    currentState: string,
+    nextState: "hold" | "completed"
+  ) => {
+    if (currentState === "completed") {
+      alert("이미 진료 완료된 환자입니다.");
+      return;
+    }
+    await updatePatientStatus(waitingId, nextState);
   };
 
   return (
@@ -370,6 +408,7 @@ export default function WaitingStatus({ onPatientSelect }: WaitingStatusProps = 
                   <th>생년월일</th>
                   <th>진료과목</th>
                   <th>진료의사</th>
+                  <th>처리</th>
                 </tr>
               </thead>
               <tbody>
@@ -403,6 +442,44 @@ export default function WaitingStatus({ onPatientSelect }: WaitingStatusProps = 
                       </td>
                       <td className={styles.doctor}>
                         {patient.doctor || '-'}
+                      </td>
+                      <td className={styles.actionCell}>
+                        <div className={styles.actionButtons}>
+                          <button
+                            type="button"
+                            className={styles.holdButton}
+                            disabled={patient.state === "completed"}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void handleQuickAction(patient.id, patient.state, "hold");
+                            }}
+                          >
+                            보류
+                          </button>
+                          <button
+                            type="button"
+                            className={styles.completeButton}
+                            disabled={patient.state === "completed"}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void handleQuickAction(patient.id, patient.state, "completed");
+                            }}
+                          >
+                            완료
+                          </button>
+                          <button
+                            type="button"
+                            className={styles.deleteButton}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const ok = window.confirm("이 내원 정보를 삭제하시겠습니까?");
+                              if (!ok) return;
+                              void deleteWaitingEntry(patient.id);
+                            }}
+                          >
+                            삭제
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );

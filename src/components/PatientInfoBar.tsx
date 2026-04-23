@@ -4,6 +4,7 @@ import styles from "./PatientInfoBar.module.css";
 
 export type PatientInfo = {
   patientId?: string;
+  visitNumber?: string;
   name?: string;
   age?: string;
   gender?: string;
@@ -33,6 +34,13 @@ export default function PatientInfoBar({ patient }: PatientInfoBarProps) {
         <li className={styles.infoItem}>
           <span className={styles.label}>환자번호</span>
           <span className={styles.value}>{safeValue(info.patientId)}</span>
+        </li>
+        <li className={styles.divider} aria-hidden="true">
+          |
+        </li>
+        <li className={styles.infoItem}>
+          <span className={styles.label}>내원번호</span>
+          <span className={styles.value}>{safeValue(info.visitNumber)}</span>
         </li>
         <li className={styles.divider} aria-hidden="true">
           |

@@ -76,6 +76,34 @@
   padding: 20px;
 }
 
+.aiPanel {
+  margin-bottom: 12px;
+  background: #2f2f2f;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.aiPanelHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.aiList {
+  display: grid;
+  gap: 6px;
+}
+
+.aiItem {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  font-size: 13px;
+  color: #e5e7eb;
+}
+
 
 /* 테이블 스타일 */
 .tableContainer {
@@ -170,6 +198,24 @@
 
 .actionCell {
   width: 80px;
+}
+
+.reasonRow td {
+  background: #202833;
+  border-right: none !important;
+}
+
+.reasonCell {
+  text-align: left !important;
+  padding: 10px 14px !important;
+}
+
+.reasonText {
+  margin: 6px 0 0;
+  color: #d1d5db;
+  line-height: 1.5;
+  white-space: normal;
+  word-break: keep-all;
 }
 
 .removeButton {

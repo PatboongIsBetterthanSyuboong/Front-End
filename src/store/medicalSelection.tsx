@@ -22,6 +22,7 @@ export interface DiagnosisSelection {
   dose: number;
   time: number;
   days: number;
+  reason?: string;
 }
 
 interface MedicalSelectionContextValue {

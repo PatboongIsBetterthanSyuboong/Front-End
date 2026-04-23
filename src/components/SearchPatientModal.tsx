@@ -9,6 +9,7 @@ interface Patient {
   name: string;
   phoneNumber: string;
   identityNumber: string;
+  visitNumber?: string;
   birth: string;
   gender: string;
 }
@@ -158,6 +159,7 @@ export default function SearchPatientModal({ isOpen, onClose, title, onSelectPat
   const handlePatientSelect = (patient: Patient) => {
     const selectedPatient: PatientInfo = {
       patientId: patient.id?.toString(),
+      visitNumber: patient.visitNumber,
       name: patient.name,
       age: calculateAgeWithMonths(patient.birth),
       gender: patient.gender,

@@ -21,6 +21,14 @@ export interface SignupRequestBody {
   password: string;
 }
 
+export interface CurrentUserProfile {
+  id: number;
+  name: string;
+  deptId: number;
+  role: Role;
+  username: string;
+}
+
 interface LogoutRequestBody {
   refreshToken: string;
 }
@@ -51,4 +59,8 @@ export async function logout(): Promise<void> {
 export async function getRole(): Promise<Role> {  
   const data = await get<Role>("/api/patients/get_role");
   return data;
+}
+
+export async function getMe(): Promise<CurrentUserProfile> {
+  return get<CurrentUserProfile>("/api/patients/get_me");
 }
