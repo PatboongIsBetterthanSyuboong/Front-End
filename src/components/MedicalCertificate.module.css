@@ -185,7 +185,7 @@
 .body {
   flex: 1;
   display: flex;
-  align-items: start;
+  align-items: flex-start;
   justify-content: center;
   overflow: hidden;
   min-height: 0;
