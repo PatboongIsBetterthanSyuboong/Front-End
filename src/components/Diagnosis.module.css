@@ -4,7 +4,12 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   margin-bottom: 16px;
   border: 1px solid #e2e8f0;
-  height: 50%;
+  /* 진료실 중앙 열이 세로 flex라 shrink 되면 배경만 짧아지고 표가 박스 밖으로 나감 → 줄어들지 않음 */
+  flex: 0 0 auto;
+  min-height: 220px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .header {
@@ -20,6 +25,7 @@
   margin: 0;
   font-size: 16px;
   font-weight: 600;
+  color: #f3f4f6;
 }
 
 .controls {
@@ -74,6 +80,7 @@
 
 .content {
   padding: 20px;
+  overflow: visible;
 }
 
 .aiPanel {

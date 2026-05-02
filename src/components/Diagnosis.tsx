@@ -18,7 +18,7 @@ type DiagnosisProps = {
 };
 
 export default function Diagnosis({ clinicVisit, ensureHistory, employeeId, onHistoryUpdated }: DiagnosisProps) {
-  const { diagnoses, addDiagnosis, removeDiagnosis, clearDiagnoses } = useMedicalSelection();
+  const { diseases, diagnoses, addDiagnosis, removeDiagnosis, clearDiagnoses } = useMedicalSelection();
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [aiRecommendations, setAiRecommendations] = useState<RecommendedPrescriptionItem[]>([]);
@@ -34,6 +34,11 @@ export default function Diagnosis({ clinicVisit, ensureHistory, employeeId, onHi
       setSelectedRecommendationKeys([]);
     }
   }, [clinicVisit?.patientId, clearDiagnoses]);
+
+  useEffect(() => {
+    setAiRecommendations([]);
+    setSelectedRecommendationKeys([]);
+  }, [clinicVisit?.historyId]);
 
   const handleSave = useCallback(async () => {
     if (!clinicVisit) {
@@ -90,12 +95,20 @@ export default function Diagnosis({ clinicVisit, ensureHistory, employeeId, onHi
       const response = await recommendPrescriptions({
         history_id: historyId,
         arango_patient_id: clinicVisit.visitNumber || undefined,
-        use_example_context: true,
+        // true 이면 GraphDB/langchain_graph_qa/patient_ctx.example.json 이 증상·top_rx 등을 덮어씀(데모 전용). 실제 Arango/MySQL 기반 추천은 false.
+        use_example_context: false,
+        disease_codes: diseases.map((d) => d.code),
       });
       const recommended = response.recommended_prescriptions ?? [];
 
       if (recommended.length === 0) {
-        alert("AI 추천 결과가 없습니다.");
+        alert(
+          "AI 추천 결과가 없습니다.\n\n" +
+            "• prescription_api(Python, 보통 포트 8001) 실행 여부\n" +
+            "• 백엔드가 해당 URL로 호출 가능한지(ai.prescription-agent.base-url)\n" +
+            "• 백엔드 로그에 Python/Gemini 오류가 없는지\n" +
+            "를 확인해 주세요."
+        );
         return;
       }
 
@@ -108,7 +121,7 @@ export default function Diagnosis({ clinicVisit, ensureHistory, employeeId, onHi
     } finally {
       setGenerating(false);
     }
-  }, [clinicVisit, ensureHistory]);
+  }, [clinicVisit, diseases, ensureHistory]);
 
   const toggleRecommendation = useCallback((key: string) => {
     setSelectedRecommendationKeys((prev) =>
@@ -224,9 +237,11 @@ export default function Diagnosis({ clinicVisit, ensureHistory, employeeId, onHi
                 <th>ID</th>
                 <th>코드</th>
                 <th>처방명</th>
+                {/* 
                 <th>투여량</th>
                 <th>횟수</th>
                 <th>일수</th>
+                */}
                 <th>삭제</th>
               </tr>
             </thead>
@@ -245,9 +260,12 @@ export default function Diagnosis({ clinicVisit, ensureHistory, employeeId, onHi
                       <td className={styles.identifier}>{item.id > 0 ? item.id : "미매칭"}</td>
                       <td className={styles.code}>{item.code}</td>
                       <td className={styles.name}>{item.name}</td>
+                      
+                      {/*
                       <td className={styles.dose}>{item.dose}</td>
                       <td className={styles.time}>{item.time}</td>
                       <td className={styles.days}>{item.days}</td>
+                      */  }
                       <td className={styles.actionCell}>
                         <button
                           type="button"

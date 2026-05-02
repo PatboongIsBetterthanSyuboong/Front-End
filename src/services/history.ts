@@ -49,6 +49,8 @@ export interface PrescriptionRecommendRequestPayload {
   history_diagnose_id?: number;
   arango_patient_id?: string;
   use_example_context?: boolean;
+  /** 상병 코드(E11 등). 생략 시 백엔드가 현재 진료 저장 상병으로 채움 */
+  disease_codes?: string[];
 }
 
 export interface RecommendedPrescriptionItem {
@@ -137,12 +139,16 @@ export async function getHistoryDiagnoses(
   });
 }
 
+/** Spring → Python prescription_api → Gemini 등 연쇄 호출용 (기본 axios 15초 초과 방지) */
+const PRESCRIPTION_RECOMMEND_TIMEOUT_MS = 180_000;
+
 export async function recommendPrescriptions(
   payload: PrescriptionRecommendRequestPayload
 ): Promise<PrescriptionRecommendResponse> {
   return post<PrescriptionRecommendResponse, PrescriptionRecommendRequestPayload>(
     "/api/agent/prescription/recommend",
-    payload
+    payload,
+    { timeout: PRESCRIPTION_RECOMMEND_TIMEOUT_MS }
   );
 }
 

@@ -1,6 +1,13 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import {
+  useState,
+  useRef,
+  useCallback,
+  useEffect,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
 import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
 import ActionBar from "@/components/ActionBar";
@@ -16,12 +23,17 @@ import ViewDataBase from "@/components/ViewDataBase";
 import AIReport from "@/components/AIReport";
 import Calender from "@/components/Calender";
 import TimeLine from "@/components/TimeLine";
-import { MedicalSelectionProvider } from "@store/medicalSelection";
+import { MedicalSelectionProvider, useMedicalSelection } from "@store/medicalSelection";
 import { ClinicVisitContext } from "@/types/clinic";
 import { Role } from "@/types/user";
 import { getMe, getRole } from "@/services/auth";
 import styles from "./page.module.css";
-import { createHistory } from "@/services/history";
+import {
+  createHistory,
+  getHistoryDiseases,
+  getHistoryDiagnoses,
+} from "@/services/history";
+import type { HistoryEntry } from "@/types/history";
 import MedicalCertificate from "@/components/MedicalCertificate";
 import CertificatePatientSearch, { CertificatePatientInfo } from "@/components/CertificatePatientSearch";
 import CertificateList, { CertificateItem } from "@/components/CertificateList";
@@ -32,6 +44,79 @@ function formatLocalDate(date: Date) {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+/** 진료실 TimeLine은 Provider 안에서만 쓰임 — 내원 더블클릭 시 상병·처방 패널에 반영 */
+function ClinicTimelineSection({
+  employeeId,
+  patientId,
+  refreshKey,
+  setClinicVisit,
+  onPendingHistoryReset,
+}: {
+  employeeId: number;
+  patientId?: number | null;
+  refreshKey?: number;
+  setClinicVisit: Dispatch<SetStateAction<ClinicVisitContext | null>>;
+  onPendingHistoryReset: () => void;
+}) {
+  const { replaceDiseases, replaceDiagnoses } = useMedicalSelection();
+
+  const handleHistoryDoubleClick = useCallback(
+    async (entry: HistoryEntry) => {
+      if (!patientId || entry.patientId !== patientId) {
+        return;
+      }
+      try {
+        onPendingHistoryReset();
+        const [diseaseRows, diagnoseRows] = await Promise.all([
+          getHistoryDiseases(entry.id, employeeId),
+          getHistoryDiagnoses(entry.id, employeeId),
+        ]);
+        setClinicVisit((prev) => ({
+          patientId: entry.patientId,
+          deptId: entry.deptId,
+          entryDate: entry.entryDate,
+          symptom: entry.symptomDetail ?? "",
+          historyId: entry.id,
+          visitNumber: prev?.visitNumber,
+          waitingId: prev?.waitingId,
+        }));
+        replaceDiseases(diseaseRows.map((d) => ({ id: d.id, code: d.code, name: d.name })));
+        replaceDiagnoses(
+          diagnoseRows.map((d) => ({
+            id: d.id,
+            code: d.code,
+            name: d.name,
+            dose: d.dose,
+            time: d.time,
+            days: d.days,
+            reason: "",
+          }))
+        );
+      } catch (err) {
+        console.error("내원 상병·처방 조회 실패:", err);
+        alert("해당 내원의 상병·처방 정보를 불러오지 못했습니다.");
+      }
+    },
+    [
+      employeeId,
+      patientId,
+      replaceDiseases,
+      replaceDiagnoses,
+      setClinicVisit,
+      onPendingHistoryReset,
+    ]
+  );
+
+  return (
+    <TimeLine
+      employeeId={employeeId}
+      patientId={patientId}
+      refreshKey={refreshKey}
+      onHistoryEntryDoubleClick={handleHistoryDoubleClick}
+    />
+  );
 }
 
 export default function DashboardPage() {
@@ -166,6 +251,10 @@ export default function DashboardPage() {
     historyCreationRef.current = creationPromise;
     return creationPromise;
   }, [clinicVisit, defaultDeptId, employeeId]);
+
+  const resetPendingHistoryCreation = useCallback(() => {
+    historyCreationRef.current = null;
+  }, []);
 
   const handleMenuChange = (menuId: string) => {
     if (!canAccessMenu(menuId)) {
@@ -382,16 +471,20 @@ export default function DashboardPage() {
             {/* Left Column - Calendar & History */}
             <div className={styles.leftColumn}>
               <Calender employeeId={employeeId} patientId={clinicPatientId} refreshKey={historyRefreshKey} />
-              <TimeLine employeeId={employeeId} patientId={clinicPatientId} refreshKey={historyRefreshKey} />
+              <ClinicTimelineSection
+                employeeId={employeeId}
+                patientId={clinicPatientId}
+                refreshKey={historyRefreshKey}
+                setClinicVisit={setClinicVisit}
+                onPendingHistoryReset={resetPendingHistoryCreation}
+              />
             </div>
 
             {/* Middle Column - Vertical Layout for Clinic Components */}
             <div className={styles.clinicMiddleColumn}>
-              <div className={styles.verticalComponent}>
-                <WaitingStatus
-                  onPatientSelect={(patient, visit) => handlePatientSelection(patient, visit)}
-                />
-              </div>
+              <WaitingStatus
+                onPatientSelect={(patient, visit) => handlePatientSelection(patient, visit)}
+              />
               <Disease
                 clinicVisit={clinicVisit}
                 ensureHistory={ensureHistory}

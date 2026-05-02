@@ -9,6 +9,8 @@ type TimeLineProps = {
   employeeId: number;
   patientId?: number | null;
   refreshKey?: number;
+  /** 진료실: 내원 카드 더블클릭 시 해당 history의 상병·처방을 불러올 때 사용 */
+  onHistoryEntryDoubleClick?: (entry: HistoryEntry) => void;
 };
 
 function formatDate(dateString: string) {
@@ -42,7 +44,12 @@ function formatLocalDate(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
-export default function TimeLine({ employeeId, patientId, refreshKey }: TimeLineProps) {
+export default function TimeLine({
+  employeeId,
+  patientId,
+  refreshKey,
+  onHistoryEntryDoubleClick,
+}: TimeLineProps) {
   const [histories, setHistories] = useState<HistoryEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -135,7 +142,22 @@ export default function TimeLine({ employeeId, patientId, refreshKey }: TimeLine
           [...groupedByYear.entries()].map(([year, entries]) => (
             <div key={year} className={styles.list} aria-label={`${year}년 내원 기록`}>
               {entries.map((entry) => (
-                <article key={entry.id} className={styles.item}>
+                <article
+                  key={entry.id}
+                  className={`${styles.item}${
+                    onHistoryEntryDoubleClick ? ` ${styles.itemClickable}` : ""
+                  }`}
+                  onDoubleClick={
+                    onHistoryEntryDoubleClick
+                      ? () => onHistoryEntryDoubleClick(entry)
+                      : undefined
+                  }
+                  title={
+                    onHistoryEntryDoubleClick
+                      ? "더블클릭: 해당 내원의 상병·처방 불러오기"
+                      : undefined
+                  }
+                >
                   <div className={styles.dateRow}>
                   <span className={styles.date}>{formatDate(entry.entryDate)}</span>
                     <div className={styles.tags}>

@@ -369,7 +369,6 @@ export default function WaitingStatus({ onPatientSelect }: WaitingStatusProps = 
         </button>
       </div>
       <div className={styles.content}>
-
       {/* 상태 요약 */}
       <div className={styles.statusGrid}>
         {statusData.map((item) => (
@@ -393,7 +392,7 @@ export default function WaitingStatus({ onPatientSelect }: WaitingStatusProps = 
         <h4 className={styles.sectionTitle}>
           {getSectionTitle()} ({filteredPatients.length}명)
         </h4>
-        
+
         {isLoading ? (
           <div className={styles.loadingMessage}>데이터를 불러오는 중...</div>
         ) : (

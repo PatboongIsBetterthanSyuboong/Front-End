@@ -40,6 +40,10 @@ export default function ViewDataBase() {
     disease: null,
     diagnose: null,
   });
+  /** 검색 입력창 값 */
+  const [searchDraft, setSearchDraft] = useState("");
+  /** API에 전달 중인 검색어(검색 버튼·Enter 시 반영) */
+  const [appliedSearch, setAppliedSearch] = useState("");
   const { addDisease, addDiagnosis } = useMedicalSelection();
 
   const fetchDiseases = useCallback(async (pageToLoad = 0) => {
@@ -51,8 +55,13 @@ export default function ViewDataBase() {
     }
     setErrors((prev) => ({ ...prev, disease: null }));
     try {
+      const q = appliedSearch.trim();
       const response = await get<PaginatedResponse<DiseaseItem>>("/api/diseases", {
-        params: { page: pageToLoad, size: PAGE_SIZE },
+        params: {
+          page: pageToLoad,
+          size: PAGE_SIZE,
+          ...(q ? { query: q } : {}),
+        },
       });
       setDiseases((prev) => (isInitialLoad ? response.items : [...prev, ...response.items]));
       setDiseasePage(response.page);
@@ -68,7 +77,7 @@ export default function ViewDataBase() {
         setDiseaseAppending(false);
       }
     }
-  }, []);
+  }, [appliedSearch]);
 
   const fetchDiagnoses = useCallback(async (pageToLoad = 0) => {
     const isInitialLoad = pageToLoad === 0;
@@ -79,8 +88,13 @@ export default function ViewDataBase() {
     }
     setErrors((prev) => ({ ...prev, diagnose: null }));
     try {
+      const q = appliedSearch.trim();
       const response = await get<PaginatedResponse<DiagnoseItem>>("/api/diagnoses", {
-        params: { page: pageToLoad, size: PAGE_SIZE },
+        params: {
+          page: pageToLoad,
+          size: PAGE_SIZE,
+          ...(q ? { query: q } : {}),
+        },
       });
       setDiagnoses((prev) => (isInitialLoad ? response.items : [...prev, ...response.items]));
       setDiagnosePage(response.page);
@@ -96,23 +110,30 @@ export default function ViewDataBase() {
         setDiagnoseAppending(false);
       }
     }
-  }, []);
+  }, [appliedSearch]);
 
+  /** 탭 또는 검색어가 바뀌면 현재 탭 목록을 처음부터 다시 조회 */
   useEffect(() => {
-    if (activeTab === "disease" && diseases.length === 0 && !diseaseLoading) {
+    if (activeTab === "disease") {
       void fetchDiseases(0);
-    } else if (activeTab === "diagnose" && diagnoses.length === 0 && !diagnoseLoading) {
+    } else {
       void fetchDiagnoses(0);
     }
-  }, [
-    activeTab,
-    diseases.length,
-    diagnoses.length,
-    diseaseLoading,
-    diagnoseLoading,
-    fetchDiseases,
-    fetchDiagnoses,
-  ]);
+  }, [activeTab, appliedSearch, fetchDiseases, fetchDiagnoses]);
+
+  const submitSearch = useCallback(() => {
+    setAppliedSearch(searchDraft.trim());
+  }, [searchDraft]);
+
+  const handleSearchKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLInputElement>) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        submitSearch();
+      }
+    },
+    [submitSearch]
+  );
 
   const itemsToRender = useMemo<ResultItem[]>(() => {
     if (activeTab === "disease") {
@@ -202,11 +223,20 @@ export default function ViewDataBase() {
         <div className={styles.searchSection}>
           <input
             type="text"
-            placeholder="상병명 또는 진단명으로 검색"
+            placeholder="코드·상병명·처방명 검색 후 Enter 또는 검색"
             className={styles.searchInput}
             disabled={isInitialLoading}
+            value={searchDraft}
+            onChange={(e) => setSearchDraft(e.target.value)}
+            onKeyDown={handleSearchKeyDown}
+            aria-label="데이터베이스 검색어"
           />
-          <button className={styles.searchButton} disabled={isInitialLoading}>
+          <button
+            type="button"
+            className={styles.searchButton}
+            disabled={isInitialLoading}
+            onClick={submitSearch}
+          >
             검색
           </button>
         </div>

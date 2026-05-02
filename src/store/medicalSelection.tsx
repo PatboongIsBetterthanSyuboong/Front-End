@@ -34,6 +34,9 @@ interface MedicalSelectionContextValue {
   removeDiagnosis: (id: number) => void;
   clearDiseases: () => void;
   clearDiagnoses: () => void;
+  /** 타임라인 등에서 특정 내원의 저장된 상병·처방을 통째로 불러올 때 사용 */
+  replaceDiseases: (items: DiseaseSelection[]) => void;
+  replaceDiagnoses: (items: DiagnosisSelection[]) => void;
 }
 
 const MedicalSelectionContext = createContext<MedicalSelectionContextValue | null>(null);
@@ -82,6 +85,14 @@ export function MedicalSelectionProvider({ children }: { children: ReactNode }) 
     setDiagnoses([]);
   }, []);
 
+  const replaceDiseases = useCallback((items: DiseaseSelection[]) => {
+    setDiseases(items);
+  }, []);
+
+  const replaceDiagnoses = useCallback((items: DiagnosisSelection[]) => {
+    setDiagnoses(items);
+  }, []);
+
   const value = useMemo<MedicalSelectionContextValue>(
     () => ({
       diseases,
@@ -92,6 +103,8 @@ export function MedicalSelectionProvider({ children }: { children: ReactNode }) 
       removeDiagnosis,
       clearDiseases,
       clearDiagnoses,
+      replaceDiseases,
+      replaceDiagnoses,
     }),
     [
       diseases,
@@ -102,6 +115,8 @@ export function MedicalSelectionProvider({ children }: { children: ReactNode }) 
       removeDiagnosis,
       clearDiseases,
       clearDiagnoses,
+      replaceDiseases,
+      replaceDiagnoses,
     ]
   );
 
