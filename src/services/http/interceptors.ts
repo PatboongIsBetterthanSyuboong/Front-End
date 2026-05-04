@@ -21,8 +21,19 @@ export function attachInterceptors(instance: AxiosInstance, getToken?: TokenGett
     (error: AxiosError) => {
       const status = error.response?.status ?? 0;
       const data = error.response?.data as unknown;
+      const body = typeof data === "object" && data !== null ? (data as Record<string, unknown>) : null;
+      const detail = body?.detail;
+      const detailStr =
+        typeof detail === "string"
+          ? detail
+          : Array.isArray(detail)
+            ? detail.map((x) => (typeof x === "object" && x && "msg" in x ? String((x as { msg: unknown }).msg) : String(x))).join("; ")
+            : "";
       const message =
-        (typeof data === "object" && data && (data as any).message) || error.message || "HTTP Error";
+        detailStr ||
+        (body?.message != null ? String(body.message) : "") ||
+        error.message ||
+        "HTTP Error";
 
       if (status === 401 && typeof window !== "undefined") {
         window.location.href = "/login";

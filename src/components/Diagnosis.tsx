@@ -9,6 +9,7 @@ import {
   setHistoryDiagnoses,
   type RecommendedPrescriptionItem,
 } from "@/services/history";
+import { HttpError } from "@/services/http/types";
 
 type DiagnosisProps = {
   clinicVisit: ClinicVisitContext | null;
@@ -103,11 +104,11 @@ export default function Diagnosis({ clinicVisit, ensureHistory, employeeId, onHi
 
       if (recommended.length === 0) {
         alert(
-          "AI 추천 결과가 없습니다.\n\n" +
-            "• prescription_api(Python, 보통 포트 8001) 실행 여부\n" +
-            "• 백엔드가 해당 URL로 호출 가능한지(ai.prescription-agent.base-url)\n" +
-            "• 백엔드 로그에 Python/Gemini 오류가 없는지\n" +
-            "를 확인해 주세요."
+          "AI 추천 결과가 비어 있습니다.\n\n" +
+            "/health 가 정상이어도, Spring(8080)→Python(8001) POST는 별도입니다.\n" +
+            "• 백엔드 로그: 「Python 처방 에이전트 호출 실패」또는「응답 없음」\n" +
+            "• application.properties 의 ai.prescription-agent.base-url (기본 http://localhost:8001)\n" +
+            "• 수동으로 띄운 Python 이면 Spring embed 와 포트 중복 여부"
         );
         return;
       }
@@ -117,7 +118,16 @@ export default function Diagnosis({ clinicVisit, ensureHistory, employeeId, onHi
       alert("AI 추천이 생성되었습니다. 아래 추천 목록에서 선택 후 '선택 처방 반영'을 눌러주세요.");
     } catch (error) {
       console.error("AI 처방 생성 실패:", error);
-      alert("AI 처방 생성에 실패했습니다. 잠시 후 다시 시도해주세요.");
+      const hint =
+        error instanceof HttpError
+          ? `\n\n[HTTP ${error.status}] ${error.message}` +
+            (error.data && typeof error.data === "object"
+              ? `\n${JSON.stringify(error.data).slice(0, 400)}`
+              : "")
+          : error instanceof Error
+            ? `\n\n${error.message}`
+            : "";
+      alert(`AI 처방 생성에 실패했습니다.${hint}`);
     } finally {
       setGenerating(false);
     }
