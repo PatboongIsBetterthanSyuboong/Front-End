@@ -27,6 +27,19 @@ type BatchResult = {
   error?: string;
 };
 
+type HealthCheckResult = {
+  status: "success" | "error";
+  checkedAt: string;
+  request: {
+    diseaseCode: string;
+    prescriptionCode: string;
+    prescriptionName: string;
+  };
+  medicalCertificate?: string;
+  evaluate?: DocumentEvaluateResponse;
+  error?: string;
+};
+
 function toPrettyJson(value: unknown): string {
   try {
     return JSON.stringify(value, null, 2);
@@ -198,6 +211,8 @@ export default function EvaluationPage() {
   const [batchResults, setBatchResults] = useState<BatchResult[]>([]);
   const [currentRowNumber, setCurrentRowNumber] = useState<number | null>(null);
   const [totalRows, setTotalRows] = useState(0);
+  const [healthChecking, setHealthChecking] = useState(false);
+  const [healthCheckResult, setHealthCheckResult] = useState<HealthCheckResult | null>(null);
 
   const requestPreview = useMemo(() => {
     return {
@@ -249,6 +264,56 @@ export default function EvaluationPage() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+  }
+
+  async function handleHealthCheck() {
+    const request = {
+      diseaseCode: "J06.9",
+      prescriptionCode: "TEST-RX-001",
+      prescriptionName: "헬스체크용 처방",
+    };
+
+    setHealthChecking(true);
+    setHealthCheckResult(null);
+    setError(null);
+
+    try {
+      const generated = await generateDocumentCertificate(request);
+      const medicalCertificate = generated.medicalCertificate ?? generated.medical_certificate ?? "";
+
+      if (!medicalCertificate.trim()) {
+        throw new Error("generate-test 응답에 medicalCertificate가 없습니다.");
+      }
+
+      const evaluated = await evaluateDocumentCertificate({
+        medicalCertificate,
+        ...request,
+      });
+
+      setHealthCheckResult({
+        status: "success",
+        checkedAt: new Date().toISOString(),
+        request,
+        medicalCertificate,
+        evaluate: evaluated,
+      });
+    } catch (err: unknown) {
+      const maybeAxios = err as { response?: { data?: ApiError }; message?: string };
+      const serverMessage =
+        maybeAxios?.response?.data?.error ??
+        maybeAxios?.response?.data?.message ??
+        maybeAxios?.message ??
+        "헬스체크 중 오류가 발생했습니다.";
+
+      setHealthCheckResult({
+        status: "error",
+        checkedAt: new Date().toISOString(),
+        request,
+        error: serverMessage,
+      });
+    } finally {
+      setHealthChecking(false);
+    }
   }
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
@@ -356,6 +421,9 @@ export default function EvaluationPage() {
               })())
             : await evaluateDocumentCertificate({
                 medicalCertificate: generatedCertificate,
+                diseaseCode,
+                prescriptionCode,
+                prescriptionName,
               });
 
           setLatestMedicalCertificate(generatedCertificate);
@@ -506,6 +574,14 @@ export default function EvaluationPage() {
             <button
               className={styles.secondaryButton}
               type="button"
+              onClick={handleHealthCheck}
+              disabled={loading || healthChecking}
+            >
+              {healthChecking ? "헬스체크 중..." : "API Healthy 체크"}
+            </button>
+            <button
+              className={styles.secondaryButton}
+              type="button"
               onClick={handleDownloadResults}
               disabled={loading || batchResults.length === 0}
             >
@@ -532,6 +608,15 @@ export default function EvaluationPage() {
         <div className={styles.block}>
           <h2>Latest evaluation</h2>
           <pre>{latestEvaluation ? toPrettyJson(latestEvaluation) : "(아직 평가 전)"}</pre>
+        </div>
+
+        <div className={styles.block}>
+          <h2>API Health Check</h2>
+          <pre>
+            {healthCheckResult
+              ? toPrettyJson(healthCheckResult)
+              : "(아직 실행 전) 버튼을 눌러 generate-test + evaluate 순차 호출 결과를 확인하세요."}
+          </pre>
         </div>
 
         {error && (

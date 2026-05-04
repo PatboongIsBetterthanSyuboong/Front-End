@@ -10,6 +10,9 @@ export interface DocumentGenerateRequest {
 
 export interface DocumentEvaluateRequest {
   medicalCertificate: string;
+  diseaseCode: string;
+  prescriptionCode: string;
+  prescriptionName: string;
 }
 
 export interface DocumentEvaluateDetail {
@@ -151,25 +154,66 @@ async function buildLocalDummyRecommendedPrescriptions(): Promise<RecommendedPre
   ];
 }
 
+/** 백엔드 snake_case / camelCase 모두 허용. 유효 항목이 없으면 null */
+function extractRemoteRecommendations(
+  remote: PrescriptionRecommendResponse
+): RecommendedPrescriptionItem[] | null {
+  const raw = remote.recommended_prescriptions ?? remote.recommendedPrescriptions;
+  if (!Array.isArray(raw) || raw.length === 0) return null;
+
+  const out: RecommendedPrescriptionItem[] = [];
+  for (const row of raw) {
+    if (!row || typeof row !== "object") continue;
+    const r = row as unknown as Record<string, unknown>;
+    const rank = typeof r.rank === "number" ? r.rank : Number(r.rank);
+    const code =
+      (typeof r.prescription_code === "string" && r.prescription_code) ||
+      (typeof r.prescriptionCode === "string" && r.prescriptionCode) ||
+      "";
+    const name =
+      (typeof r.prescription_name === "string" && r.prescription_name) ||
+      (typeof r.prescriptionName === "string" && r.prescriptionName) ||
+      "";
+    const reason = typeof r.reason === "string" ? r.reason : "";
+    const scoreRaw = r.confidence_score ?? r.confidenceScore;
+    const confidence_score = typeof scoreRaw === "number" ? scoreRaw : Number(scoreRaw);
+    if (!Number.isFinite(rank) || !code) continue;
+    out.push({
+      rank,
+      prescription_code: code,
+      prescription_name: name,
+      reason,
+      confidence_score: Number.isFinite(confidence_score) ? confidence_score : 0,
+    });
+  }
+  return out.length > 0 ? out : null;
+}
+
 export async function recommendPrescription(
   body: PrescriptionRecommendRequestBody
 ): Promise<PrescriptionRecommendResponse> {
   let remote: PrescriptionRecommendResponse = {};
+  let apiSucceeded = false;
   try {
     remote = await post<PrescriptionRecommendResponse, PrescriptionRecommendRequestBody>(
       "/api/agent/prescription/recommend",
       body
     );
+    apiSucceeded = true;
   } catch {
     // 네트워크/404/스펙 불일치 등 — 더미 추천만 사용
   }
 
-  const dummyList = await buildLocalDummyRecommendedPrescriptions();
+  const fromApi = apiSucceeded ? extractRemoteRecommendations(remote) : null;
+  const list =
+    fromApi != null && fromApi.length > 0
+      ? fromApi
+      : await buildLocalDummyRecommendedPrescriptions();
 
   return {
     ...remote,
     history_diagnose_id: body.history_diagnose_id,
-    recommended_prescriptions: dummyList,
+    recommended_prescriptions: list,
     recommendedPrescriptions: undefined,
   };
 }

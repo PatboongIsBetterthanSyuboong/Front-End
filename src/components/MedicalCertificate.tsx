@@ -89,6 +89,13 @@ const FIELD_CONFIGS: Record<CertificateType, FieldConfig[]> = {
   ],
   military: [
     // 나중에 추가
+    { id: "patientName",  label: "성명",           top: "18%", left: "22%",  width: "180px" },
+    { id: "patientId",    label: "환자번호",        top: "12.5%", left: "11%",  width: "70px" },
+    { id: "idNumber",     label: "주민등록번호",    top: "18%", left: "50%",  width: "160px" },
+    { id: "diagnosis",    label: "병명(상병명)",    top: "31.3%", left: "48%",  width: "320px" },
+    { id: "opinion",      label: "향후 치료 소견",  top: "50%",   left: "24%",  width: "65%", multiline: true, rows: 7 },
+    { id: "diagnosisDate",    label: "진단일",          top: "46.2%",   left: "64.5%",  width: "160px" },
+    { id: "issueDate",    label: "발급일",          top: "80.5%",   left: "63%",  width: "160px" },
   ],
 };
 
