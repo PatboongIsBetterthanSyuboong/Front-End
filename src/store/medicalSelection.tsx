@@ -25,9 +25,23 @@ export interface DiagnosisSelection {
   reason?: string;
 }
 
+/** Active Learning용: AI 추천 처방에 대한 의사의 수용/거부 피드백 */
+export interface PrescriptionFeedbackItem {
+  rank: number;
+  id: number;
+  prescription_code: string;
+  prescription_name: string;
+  confidence_score: number;
+  reason: string;
+  /** 체크박스 선택 = accepted, 미선택 = rejected */
+  status: "accepted" | "rejected";
+}
+
 interface MedicalSelectionContextValue {
   diseases: DiseaseSelection[];
   diagnoses: DiagnosisSelection[];
+  /** 현재 AI 추천 세션의 accepted/rejected 피드백 (그래프 생성 시 인자로 전달) */
+  prescriptionFeedback: PrescriptionFeedbackItem[];
   addDisease: (item: DiseaseSelection) => void;
   addDiagnosis: (item: DiagnosisSelection) => void;
   removeDisease: (id: number) => void;
@@ -37,6 +51,9 @@ interface MedicalSelectionContextValue {
   /** 타임라인 등에서 특정 내원의 저장된 상병·처방을 통째로 불러올 때 사용 */
   replaceDiseases: (items: DiseaseSelection[]) => void;
   replaceDiagnoses: (items: DiagnosisSelection[]) => void;
+  /** '선택 처방 반영' 클릭 시 accepted/rejected 피드백을 저장 */
+  setPrescriptionFeedback: (items: PrescriptionFeedbackItem[]) => void;
+  clearPrescriptionFeedback: () => void;
 }
 
 const MedicalSelectionContext = createContext<MedicalSelectionContextValue | null>(null);
@@ -44,6 +61,7 @@ const MedicalSelectionContext = createContext<MedicalSelectionContextValue | nul
 export function MedicalSelectionProvider({ children }: { children: ReactNode }) {
   const [diseases, setDiseases] = useState<DiseaseSelection[]>([]);
   const [diagnoses, setDiagnoses] = useState<DiagnosisSelection[]>([]);
+  const [prescriptionFeedback, setPrescriptionFeedbackState] = useState<PrescriptionFeedbackItem[]>([]);
 
   const addDisease = useCallback((item: DiseaseSelection) => {
     setDiseases((prev) => {
@@ -93,10 +111,19 @@ export function MedicalSelectionProvider({ children }: { children: ReactNode }) 
     setDiagnoses(items);
   }, []);
 
+  const setPrescriptionFeedback = useCallback((items: PrescriptionFeedbackItem[]) => {
+    setPrescriptionFeedbackState(items);
+  }, []);
+
+  const clearPrescriptionFeedback = useCallback(() => {
+    setPrescriptionFeedbackState([]);
+  }, []);
+
   const value = useMemo<MedicalSelectionContextValue>(
     () => ({
       diseases,
       diagnoses,
+      prescriptionFeedback,
       addDisease,
       addDiagnosis,
       removeDisease,
@@ -105,10 +132,13 @@ export function MedicalSelectionProvider({ children }: { children: ReactNode }) 
       clearDiagnoses,
       replaceDiseases,
       replaceDiagnoses,
+      setPrescriptionFeedback,
+      clearPrescriptionFeedback,
     }),
     [
       diseases,
       diagnoses,
+      prescriptionFeedback,
       addDisease,
       addDiagnosis,
       removeDisease,
@@ -117,6 +147,8 @@ export function MedicalSelectionProvider({ children }: { children: ReactNode }) 
       clearDiagnoses,
       replaceDiseases,
       replaceDiagnoses,
+      setPrescriptionFeedback,
+      clearPrescriptionFeedback,
     ]
   );
 

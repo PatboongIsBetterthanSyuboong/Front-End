@@ -152,3 +152,24 @@ export async function recommendPrescriptions(
   );
 }
 
+export interface PrescriptionFeedbackItemPayload {
+  rank: number;
+  prescriptionId?: number;
+  prescriptionCode: string;
+  prescriptionName: string;
+  confidenceScore?: number;
+  reason?: string;
+  /** accepted: 체크 선택, rejected: 체크 미선택, missed: AI 미추천이지만 의사가 직접 추가·저장 */
+  status: "accepted" | "rejected" | "missed";
+}
+
+export interface SavePrescriptionFeedbackPayload {
+  historyId: number;
+  historyDiagnoseId?: number;
+  feedbackItems: PrescriptionFeedbackItemPayload[];
+}
+
+export async function savePrescriptionFeedback(payload: SavePrescriptionFeedbackPayload): Promise<void> {
+  return post<void, SavePrescriptionFeedbackPayload>("/api/agent/prescription/feedback", payload);
+}
+

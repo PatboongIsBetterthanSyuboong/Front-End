@@ -1,11 +1,12 @@
 "use client";
 
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
-import { useMedicalSelection } from "@store/medicalSelection";
+import { useMedicalSelection, type PrescriptionFeedbackItem } from "@store/medicalSelection";
 import styles from "./Diagnosis.module.css";
 import { ClinicVisitContext } from "@/types/clinic";
 import {
   recommendPrescriptions,
+  savePrescriptionFeedback,
   setHistoryDiagnoses,
   type RecommendedPrescriptionItem,
 } from "@/services/history";
@@ -19,11 +20,13 @@ type DiagnosisProps = {
 };
 
 export default function Diagnosis({ clinicVisit, ensureHistory, employeeId, onHistoryUpdated }: DiagnosisProps) {
-  const { diseases, diagnoses, addDiagnosis, removeDiagnosis, clearDiagnoses } = useMedicalSelection();
+  const { diseases, diagnoses, prescriptionFeedback, addDiagnosis, removeDiagnosis, clearDiagnoses, setPrescriptionFeedback, clearPrescriptionFeedback } = useMedicalSelection();
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [aiRecommendations, setAiRecommendations] = useState<RecommendedPrescriptionItem[]>([]);
   const [selectedRecommendationKeys, setSelectedRecommendationKeys] = useState<string[]>([]);
+  const [aiSessionHistoryId, setAiSessionHistoryId] = useState<number | null>(null);
+  const [aiSessionHistoryDiagnoseId, setAiSessionHistoryDiagnoseId] = useState<number | null>(null);
   const prevPatientIdRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -31,15 +34,21 @@ export default function Diagnosis({ clinicVisit, ensureHistory, employeeId, onHi
     if (prevPatientIdRef.current !== currentPatientId) {
       prevPatientIdRef.current = currentPatientId;
       clearDiagnoses();
+      clearPrescriptionFeedback();
       setAiRecommendations([]);
       setSelectedRecommendationKeys([]);
+      setAiSessionHistoryId(null);
+      setAiSessionHistoryDiagnoseId(null);
     }
-  }, [clinicVisit?.patientId, clearDiagnoses]);
+  }, [clearDiagnoses, clearPrescriptionFeedback, clinicVisit?.patientId]);
 
   useEffect(() => {
+    clearPrescriptionFeedback();
     setAiRecommendations([]);
     setSelectedRecommendationKeys([]);
-  }, [clinicVisit?.historyId]);
+    setAiSessionHistoryId(null);
+    setAiSessionHistoryDiagnoseId(null);
+  }, [clearPrescriptionFeedback, clinicVisit?.historyId]);
 
   const handleSave = useCallback(async () => {
     if (!clinicVisit) {
@@ -67,6 +76,29 @@ export default function Diagnosis({ clinicVisit, ensureHistory, employeeId, onHi
         }))
       );
       onHistoryUpdated?.();
+
+      // AI가 추천하지 않았지만 의사가 직접 추가·저장한 처방 → missed로 기록
+      // AI를 아예 안 쓴 경우에도 모든 저장 처방이 missed로 분류됨
+      const aiRecommendedIds = new Set(prescriptionFeedback.map((f) => f.id).filter((id) => id > 0));
+      const missedItems = persistableDiagnoses.filter((d) => !aiRecommendedIds.has(d.id));
+      if (missedItems.length > 0) {
+        try {
+          await savePrescriptionFeedback({
+            historyId,
+            historyDiagnoseId: aiSessionHistoryDiagnoseId ?? undefined,
+            feedbackItems: missedItems.map((d) => ({
+              rank: 0,
+              prescriptionId: d.id,
+              prescriptionCode: d.code,
+              prescriptionName: d.name,
+              status: "missed" as const,
+            })),
+          });
+        } catch (error) {
+          console.error("missed 처방 피드백 저장 실패:", error);
+        }
+      }
+
       if (persistableDiagnoses.length !== diagnoses.length) {
         alert(
           `처방 정보가 저장되었습니다. (DB 매칭 ${persistableDiagnoses.length}건 저장, ${
@@ -82,7 +114,7 @@ export default function Diagnosis({ clinicVisit, ensureHistory, employeeId, onHi
     } finally {
       setSaving(false);
     }
-  }, [clinicVisit, diagnoses, employeeId, ensureHistory]);
+  }, [aiSessionHistoryDiagnoseId, clinicVisit, diagnoses, employeeId, ensureHistory, prescriptionFeedback]);
 
   const handleGenerateByAI = useCallback(async () => {
     if (!clinicVisit) {
@@ -115,6 +147,9 @@ export default function Diagnosis({ clinicVisit, ensureHistory, employeeId, onHi
 
       setAiRecommendations(recommended);
       setSelectedRecommendationKeys(recommended.map((item) => `${item.rank}:${item.prescription_code}:${item.prescription_name}`));
+      setAiSessionHistoryId(historyId);
+      setAiSessionHistoryDiagnoseId(response.history_diagnose_id ?? null);
+      clearPrescriptionFeedback();
       alert("AI 추천이 생성되었습니다. 아래 추천 목록에서 선택 후 '선택 처방 반영'을 눌러주세요.");
     } catch (error) {
       console.error("AI 처방 생성 실패:", error);
@@ -131,7 +166,7 @@ export default function Diagnosis({ clinicVisit, ensureHistory, employeeId, onHi
     } finally {
       setGenerating(false);
     }
-  }, [clinicVisit, diseases, ensureHistory]);
+  }, [clearPrescriptionFeedback, clinicVisit, diseases, ensureHistory]);
 
   const toggleRecommendation = useCallback((key: string) => {
     setSelectedRecommendationKeys((prev) =>
@@ -139,23 +174,33 @@ export default function Diagnosis({ clinicVisit, ensureHistory, employeeId, onHi
     );
   }, []);
 
-  const handleApplySelectedRecommendations = useCallback(() => {
+  const handleApplySelectedRecommendations = useCallback(async () => {
     if (aiRecommendations.length === 0) {
       alert("먼저 AI 추천을 생성해주세요.");
       return;
     }
-    if (selectedRecommendationKeys.length === 0) {
-      alert("반영할 추천 처방을 선택해주세요.");
-      return;
-    }
+    // selectedRecommendationKeys가 0이어도 전체 거부 피드백으로 저장
 
+    const feedback: PrescriptionFeedbackItem[] = [];
     let mappedCount = 0;
     let unmappedCount = 0;
+
     for (const item of aiRecommendations) {
       const key = `${item.rank}:${item.prescription_code}:${item.prescription_name}`;
-      if (!selectedRecommendationKeys.includes(key)) {
-        continue;
-      }
+      const isAccepted = selectedRecommendationKeys.includes(key);
+
+      feedback.push({
+        rank: item.rank,
+        id: item.id,
+        prescription_code: item.prescription_code ?? "",
+        prescription_name: item.prescription_name ?? "",
+        confidence_score: item.confidence_score ?? 0,
+        reason: item.reason ?? "",
+        status: isAccepted ? "accepted" : "rejected",
+      });
+
+      if (!isAccepted) continue;
+
       const isMapped = Boolean(item.id && item.id > 0);
       const diagnosisId = isMapped ? item.id : -Math.max(1, item.rank ?? unmappedCount + 1);
       addDiagnosis({
@@ -173,12 +218,37 @@ export default function Diagnosis({ clinicVisit, ensureHistory, employeeId, onHi
       else unmappedCount += 1;
     }
 
-    if (mappedCount === 0) {
+    setPrescriptionFeedback(feedback);
+
+    if (aiSessionHistoryId !== null) {
+      try {
+        await savePrescriptionFeedback({
+          historyId: aiSessionHistoryId,
+          historyDiagnoseId: aiSessionHistoryDiagnoseId ?? undefined,
+          feedbackItems: feedback.map((f) => ({
+            rank: f.rank,
+            prescriptionId: f.id > 0 ? f.id : undefined,
+            prescriptionCode: f.prescription_code,
+            prescriptionName: f.prescription_name,
+            confidenceScore: f.confidence_score,
+            reason: f.reason,
+            status: f.status,
+          })),
+        });
+      } catch (error) {
+        console.error("처방 피드백 저장 실패:", error);
+      }
+    }
+
+    const acceptedCount = feedback.filter((f) => f.status === "accepted").length;
+    if (acceptedCount === 0) {
+      alert("추천 처방을 모두 거부하였습니다. 피드백이 기록되었습니다.");
+    } else if (mappedCount === 0) {
       alert("선택한 추천은 화면 반영만 되었고, DB 저장 가능한 항목은 없습니다.");
     } else {
       alert(`선택 반영 완료: DB 매칭 ${mappedCount}건, DB 미매칭 ${unmappedCount}건`);
     }
-  }, [addDiagnosis, aiRecommendations, selectedRecommendationKeys]);
+  }, [addDiagnosis, aiRecommendations, aiSessionHistoryDiagnoseId, aiSessionHistoryId, selectedRecommendationKeys, setPrescriptionFeedback]);
 
   return (
     <div className={styles.container}>
