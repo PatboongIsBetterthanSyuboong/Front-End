@@ -40,12 +40,15 @@ export interface DocumentGenerateResponse {
   medical_certificate?: string;
 }
 
+const DOCUMENT_API_TIMEOUT_MS = 90000;
+
 export async function generateDocumentCertificate(
   body: DocumentGenerateRequest
 ): Promise<DocumentGenerateResponse> {
   return post<DocumentGenerateResponse, DocumentGenerateRequest>(
     "/api/agent/document/generate-test",
-    body
+    body,
+    { timeout: DOCUMENT_API_TIMEOUT_MS }
   );
 }
 
@@ -54,7 +57,8 @@ export async function evaluateDocumentCertificate(
 ): Promise<DocumentEvaluateResponse> {
   return post<DocumentEvaluateResponse, DocumentEvaluateRequest>(
     "/api/agent/document/evaluate",
-    body
+    body,
+    { timeout: DOCUMENT_API_TIMEOUT_MS }
   );
 }
 

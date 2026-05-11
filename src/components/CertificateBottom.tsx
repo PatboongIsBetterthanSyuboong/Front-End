@@ -13,21 +13,36 @@ interface HistoryVisitGroup {
   diseases: HistoryDiseaseResponse[];
 }
 
-function formatDiseasesForCertificate(diseases: HistoryDiseaseResponse[]): string {
-  return diseases
-    .map((d) => {
-      const core = [d.code, d.name].filter(Boolean).join(" ").trim();
-      if (!core) return "";
-      return d.degree ? `${core} (${d.degree})` : core;
-    })
-    .filter(Boolean)
-    .join(", ");
+export interface CertificateDiseaseApplyPayload {
+  diseaseCode: string;
+  primaryDiseaseName: string;
+  additionalDiseaseNames: string;
+  historyId: number;
+}
+
+function buildDiseaseApplyPayload(
+  diseases: HistoryDiseaseResponse[],
+  historyId: number
+): CertificateDiseaseApplyPayload {
+  return {
+    diseaseCode: diseases
+      .map((d) => d.code.trim())
+      .filter(Boolean)
+      .join("\n"),
+    primaryDiseaseName: diseases[0]?.name.trim() ?? "",
+    additionalDiseaseNames: diseases
+      .slice(1)
+      .map((d) => d.name.trim())
+      .filter(Boolean)
+      .join("\n"),
+    historyId,
+  };
 }
 
 interface Props {
   patientId?: number;
   employeeId: number;
-  onApplyDiagnosisToCertificate?: (payload: { text: string; historyId: number }) => void;
+  onApplyDiagnosisToCertificate?: (payload: CertificateDiseaseApplyPayload) => void;
 }
 
 export default function CertificateBottom({
@@ -161,16 +176,14 @@ export default function CertificateBottom({
                         selectedDiseases.length === 0 || !onApplyDiagnosisToCertificate
                       }
                       onClick={() => {
-                        const text = formatDiseasesForCertificate(selectedDiseases);
                         if (
-                          text &&
+                          selectedDiseases.length > 0 &&
                           selectedHistoryId != null &&
                           onApplyDiagnosisToCertificate
                         ) {
-                          onApplyDiagnosisToCertificate({
-                            text,
-                            historyId: selectedHistoryId,
-                          });
+                          onApplyDiagnosisToCertificate(
+                            buildDiseaseApplyPayload(selectedDiseases, selectedHistoryId)
+                          );
                         }
                       }}
                     >

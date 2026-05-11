@@ -240,9 +240,15 @@
 
 /* 공통 오버레이 스타일 */
 .overlayInput,
-.overlayTextarea {
+.overlayTextarea,
+.overlayCheckboxLabel {
   position: absolute;
   pointer-events: all;
+  z-index: 10;
+}
+
+.overlayInput,
+.overlayTextarea {
   background: rgba(255, 255, 255, 0.75);
   border: 1px solid #3b82f6;
   border-radius: 3px;
@@ -252,7 +258,6 @@
   outline: none;
   transition: background 0.15s, border-color 0.15s;
   font-family: inherit;
-  z-index: 10;
 }
 
 .overlayInput:focus,
@@ -276,4 +281,30 @@
   resize: none;
   line-height: 1.4;
   padding: 4px 6px;
+}
+
+.overlayCheckboxLabel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 18px;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid #3b82f6;
+  border-radius: 3px;
+  padding: 0;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+
+.overlayCheckboxLabel:focus-within {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+}
+
+.overlayCheckbox {
+  width: 12px;
+  height: 12px;
+  margin: 0;
+  cursor: pointer;
 }

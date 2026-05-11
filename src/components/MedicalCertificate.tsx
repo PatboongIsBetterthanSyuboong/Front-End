@@ -22,6 +22,7 @@ interface FieldConfig {
   left: string;
   width: string;
   multiline?: boolean;
+  checkbox?: boolean;
   rows?: number;
 }
 
@@ -82,7 +83,11 @@ const FIELD_CONFIGS: Record<CertificateType, FieldConfig[]> = {
     { id: "patientName",  label: "성명",           top: "18.7%", left: "24%",  width: "180px" },
     { id: "patientId",    label: "환자번호",        top: "11.4%", left: "24%",  width: "70px" },
     { id: "idNumber",     label: "주민등록번호",    top: "18.7%", left: "64.5%",  width: "160px" },
-    { id: "diagnosis",    label: "병명(상병명)",    top: "30%", left: "26%",  width: "320px" },
+    { id: "diseaseCode",  label: "상병코드",        top: "30%", left: "73.5%",  width: "100px", multiline: true, rows: 6 },
+    { id: "diagnosis",    label: "병명(상병명)",    top: "30%", left: "26%",  width: "300px" },
+    { id: "clinicalEstimate", label: "임상적추정", top: "38.2%", left: "12%", width: "18px", checkbox: true },
+    { id: "finalDiagnosis", label: "최종 진단", top: "40.2%", left: "12%", width: "18px", checkbox: true },
+    { id: "diagnosisExtra", label: "추가 상병명",    top: "34.2%", left: "26%",  width: "300px", multiline: true, rows: 3 },
     { id: "opinion",      label: "향후 치료 소견",  top: "50%",   left: "24%",  width: "65%", multiline: true, rows: 7 },
     { id: "diagnosisDate",    label: "진단일",          top: "46.2%",   left: "64.5%",  width: "160px" },
     { id: "issueDate",    label: "발급일",          top: "80.5%",   left: "63%",  width: "160px" },
@@ -92,7 +97,11 @@ const FIELD_CONFIGS: Record<CertificateType, FieldConfig[]> = {
     { id: "patientName",  label: "성명",           top: "18%", left: "22%",  width: "180px" },
     { id: "patientId",    label: "환자번호",        top: "12.5%", left: "11%",  width: "70px" },
     { id: "idNumber",     label: "주민등록번호",    top: "18%", left: "50%",  width: "160px" },
+    { id: "diseaseCode",  label: "상병코드",        top: "31.3%", left: "22%",  width: "150px", multiline: true, rows: 3 },
     { id: "diagnosis",    label: "병명(상병명)",    top: "31.3%", left: "48%",  width: "320px" },
+    { id: "clinicalEstimate", label: "임상적추정", top: "35.5%", left: "35.5%", width: "18px", checkbox: true },
+    { id: "finalDiagnosis", label: "최종 진단", top: "38.5%", left: "35.5%", width: "18px", checkbox: true },
+    { id: "diagnosisExtra", label: "추가 상병명",    top: "35.5%", left: "48%",  width: "320px", multiline: true, rows: 3 },
     { id: "opinion",      label: "향후 치료 소견",  top: "50%",   left: "24%",  width: "65%", multiline: true, rows: 7 },
     { id: "diagnosisDate",    label: "진단일",          top: "46.2%",   left: "64.5%",  width: "160px" },
     { id: "issueDate",    label: "발급일",          top: "80.5%",   left: "63%",  width: "160px" },
@@ -108,7 +117,9 @@ const PATIENT_FIELD_MAP: Partial<Record<string, keyof CertificatePatientInfo>> =
 
 export interface CertificateDiagnosisApply {
   key: number;
-  text: string;
+  diseaseCode: string;
+  primaryDiseaseName: string;
+  additionalDiseaseNames: string;
   historyId: number;
 }
 
@@ -116,7 +127,7 @@ interface MedicalCertificateProps {
   selected: CertificateItem | null;
   patientInfo: CertificatePatientInfo | null;
   employeeId: number;
-  /** 상병 패널에서 보낸 적용 요청; `key`가 바뀔 때마다 병명(상병명) 필드에 반영 */
+  /** 상병 패널에서 보낸 적용 요청; `key`가 바뀔 때마다 상병 코드와 상병명 필드에 반영 */
   diagnosisApply?: CertificateDiagnosisApply | null;
 }
 
@@ -184,10 +195,17 @@ export default function MedicalCertificate({
   useEffect(() => {
     if (!diagnosisApply || !selected) return;
     const configs = FIELD_CONFIGS[selected.type];
-    if (!configs.some((f) => f.id === "diagnosis")) return;
+    const hasField = (id: string) => configs.some((f) => f.id === id);
+    const patch: FieldValues = {};
+    if (hasField("diseaseCode")) patch.diseaseCode = diagnosisApply.diseaseCode;
+    if (hasField("diagnosis")) patch.diagnosis = diagnosisApply.primaryDiseaseName;
+    if (hasField("diagnosisExtra")) {
+      patch.diagnosisExtra = diagnosisApply.additionalDiseaseNames;
+    }
+    if (Object.keys(patch).length === 0) return;
     setFieldValues((prev) => ({
       ...prev,
-      [selected.type]: { ...prev[selected.type], diagnosis: diagnosisApply.text },
+      [selected.type]: { ...prev[selected.type], ...patch },
     }));
   }, [diagnosisApply, selected]);
 
@@ -473,7 +491,26 @@ export default function MedicalCertificate({
             <div className={styles.scrollBlocker} />
             <div className={styles.fieldsLayer} ref={fieldsLayerRef}>
               {FIELD_CONFIGS[selected.type].map((field) =>
-                field.multiline ? (
+                field.checkbox ? (
+                  <label
+                    key={field.id}
+                    className={styles.overlayCheckboxLabel}
+                    style={{
+                      top: field.top,
+                      left: field.left,
+                      width: field.width,
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      className={styles.overlayCheckbox}
+                      checked={fieldValues[selected.type][field.id] === "true"}
+                      onChange={(e) =>
+                        handleChange(selected.type, field.id, e.target.checked ? "true" : "")
+                      }
+                    />
+                  </label>
+                ) : field.multiline ? (
                   <textarea
                     key={field.id}
                     className={styles.overlayTextarea}

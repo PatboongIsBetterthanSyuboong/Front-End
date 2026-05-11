@@ -37,7 +37,7 @@ import type { HistoryEntry } from "@/types/history";
 import MedicalCertificate from "@/components/MedicalCertificate";
 import CertificatePatientSearch, { CertificatePatientInfo } from "@/components/CertificatePatientSearch";
 import CertificateList, { CertificateItem } from "@/components/CertificateList";
-import CertificateBottom from "@/components/CertificateBottom";
+import CertificateBottom, { type CertificateDiseaseApplyPayload } from "@/components/CertificateBottom";
 
 function formatLocalDate(date: Date) {
   const year = date.getFullYear();
@@ -132,7 +132,9 @@ export default function DashboardPage() {
   const [certificatePatient, setCertificatePatient] = useState<CertificatePatientInfo | null>(null);
   const [certificateDiagnosisApply, setCertificateDiagnosisApply] = useState<{
     key: number;
-    text: string;
+    diseaseCode: string;
+    primaryDiseaseName: string;
+    additionalDiseaseNames: string;
     historyId: number;
   } | null>(null);
 
@@ -265,10 +267,12 @@ export default function DashboardPage() {
   };
 
   const applyCertificateDiagnosis = useCallback(
-    (payload: { text: string; historyId: number }) => {
+    (payload: CertificateDiseaseApplyPayload) => {
       setCertificateDiagnosisApply((prev) => ({
         key: (prev?.key ?? 0) + 1,
-        text: payload.text,
+        diseaseCode: payload.diseaseCode,
+        primaryDiseaseName: payload.primaryDiseaseName,
+        additionalDiseaseNames: payload.additionalDiseaseNames,
         historyId: payload.historyId,
       }));
     },
@@ -533,6 +537,7 @@ export default function DashboardPage() {
             <MedicalCertificate
               selected={selectedCertificate}
               patientInfo={certificatePatient}
+              employeeId={employeeId}
               diagnosisApply={certificateDiagnosisApply}
             />
           </div>

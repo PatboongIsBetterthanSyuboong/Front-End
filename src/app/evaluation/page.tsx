@@ -40,6 +40,9 @@ type HealthCheckResult = {
   error?: string;
 };
 
+const MAX_BATCH_ROWS = 5000;
+const MAX_CONCURRENT_REQUESTS = 5;
+
 function toPrettyJson(value: unknown): string {
   try {
     return JSON.stringify(value, null, 2);
@@ -209,7 +212,7 @@ export default function EvaluationPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [batchResults, setBatchResults] = useState<BatchResult[]>([]);
-  const [currentRowNumber, setCurrentRowNumber] = useState<number | null>(null);
+  const [processedRows, setProcessedRows] = useState(0);
   const [totalRows, setTotalRows] = useState(0);
   const [healthChecking, setHealthChecking] = useState(false);
   const [healthCheckResult, setHealthCheckResult] = useState<HealthCheckResult | null>(null);
@@ -239,12 +242,17 @@ export default function EvaluationPage() {
     const errorCount = batchResults.length - successCount;
     return {
       totalRows,
-      processedRows: batchResults.length,
+      processedRows,
       successCount,
       errorCount,
-      currentRowNumber,
     };
-  }, [batchResults, currentRowNumber, totalRows]);
+  }, [batchResults, processedRows, totalRows]);
+  const progressPercent = useMemo(() => {
+    if (totalRows === 0) {
+      return 0;
+    }
+    return Math.round((processedRows / totalRows) * 100);
+  }, [processedRows, totalRows]);
 
   function handleDownloadResults() {
     if (batchResults.length === 0) {
@@ -330,7 +338,7 @@ export default function EvaluationPage() {
     const parsedMaxRows = Number(maxRowsInput);
     const maxRows =
       maxRowsInput.trim() === ""
-        ? null
+        ? MAX_BATCH_ROWS
         : Number.isInteger(parsedMaxRows) && parsedMaxRows > 0
           ? parsedMaxRows
           : null;
@@ -348,48 +356,44 @@ export default function EvaluationPage() {
       setError("개수 제한은 1 이상의 정수로 입력해주세요.");
       return;
     }
+    if (maxRows != null && maxRows > MAX_BATCH_ROWS) {
+      setError(`처리 개수 제한은 최대 ${MAX_BATCH_ROWS}개까지 가능합니다.`);
+      return;
+    }
 
     setLoading(true);
     setError(null);
     setBatchResults([]);
     setLatestMedicalCertificate("");
     setLatestEvaluation(null);
-    setCurrentRowNumber(null);
+    setProcessedRows(0);
     setTotalRows(0);
 
     try {
       const parsedRows = (await parseWorksheetRows(csvFile)).filter((row) => !isRowEmpty(row));
       const sourceRows = skipHeaderRow ? parsedRows.slice(1) : parsedRows;
-      const dataRows = maxRows == null ? sourceRows : sourceRows.slice(0, maxRows);
+      const dataRows = sourceRows.slice(0, Math.min(maxRows ?? MAX_BATCH_ROWS, MAX_BATCH_ROWS));
 
       if (dataRows.length === 0) {
         throw new Error("처리할 XLSX 데이터 행이 없습니다.");
       }
 
       setTotalRows(dataRows.length);
-
-      for (let i = 0; i < dataRows.length; i += 1) {
-        const row = dataRows[i];
+      const taskFactories = dataRows.map((row, i) => async (): Promise<BatchResult> => {
         const rowNumber = skipHeaderRow ? i + 2 : i + 1;
         const diseaseCode = row[diseaseIndex]?.trim() ?? "";
         const prescriptionCode = row[prescriptionCodeIndex]?.trim() ?? "";
         const prescriptionName = row[prescriptionNameIndex]?.trim() ?? "";
 
-        setCurrentRowNumber(rowNumber);
-
         if (!diseaseCode || !prescriptionCode || !prescriptionName) {
-          setBatchResults((prev) => [
-            ...prev,
-            {
-              rowNumber,
-              diseaseCode,
-              prescriptionCode,
-              prescriptionName,
-              status: "error",
-              error: "지정한 열에서 필요한 값(상병코드, 처방코드, 처방명)을 모두 찾지 못했습니다.",
-            },
-          ]);
-          continue;
+          return {
+            rowNumber,
+            diseaseCode,
+            prescriptionCode,
+            prescriptionName,
+            status: "error",
+            error: "지정한 열에서 필요한 값(상병코드, 처방코드, 처방명)을 모두 찾지 못했습니다.",
+          };
         }
 
         try {
@@ -428,19 +432,16 @@ export default function EvaluationPage() {
 
           setLatestMedicalCertificate(generatedCertificate);
           setLatestEvaluation(evaluated);
-          setBatchResults((prev) => [
-            ...prev,
-            {
-              rowNumber,
-              diseaseCode,
-              prescriptionCode,
-              prescriptionName,
-              status: "success",
-              medicalCertificate: generatedCertificate,
-              generateRawResponse: generated,
-              evaluateRawResponse: evaluated,
-            },
-          ]);
+          return {
+            rowNumber,
+            diseaseCode,
+            prescriptionCode,
+            prescriptionName,
+            status: "success",
+            medicalCertificate: generatedCertificate,
+            generateRawResponse: generated,
+            evaluateRawResponse: evaluated,
+          };
         } catch (err: unknown) {
           const maybeAxios = err as { response?: { data?: ApiError }; message?: string };
           const serverMessage =
@@ -448,20 +449,26 @@ export default function EvaluationPage() {
             maybeAxios?.response?.data?.message ??
             maybeAxios?.message ??
             "생성 또는 평가 요청 중 오류가 발생했습니다.";
-
-          setBatchResults((prev) => [
-            ...prev,
-            {
-              rowNumber,
-              diseaseCode,
-              prescriptionCode,
-              prescriptionName,
-              status: "error",
-              error: serverMessage,
-            },
-          ]);
+          return {
+            rowNumber,
+            diseaseCode,
+            prescriptionCode,
+            prescriptionName,
+            status: "error",
+            error: serverMessage,
+          };
+        } finally {
+          setProcessedRows((prev) => prev + 1);
         }
+      });
+      const results: BatchResult[] = [];
+      for (let i = 0; i < taskFactories.length; i += MAX_CONCURRENT_REQUESTS) {
+        const chunk = taskFactories.slice(i, i + MAX_CONCURRENT_REQUESTS);
+        const chunkResults = await Promise.all(chunk.map((task) => task()));
+        results.push(...chunkResults);
       }
+      const sorted = [...results].sort((a, b) => a.rowNumber - b.rowNumber);
+      setBatchResults(sorted);
     } catch (err: unknown) {
       const fallback = "XLSX 처리 또는 생성 요청 중 오류가 발생했습니다.";
       const maybeAxios = err as { response?: { data?: ApiError }; message?: string };
@@ -471,7 +478,6 @@ export default function EvaluationPage() {
         maybeAxios?.message;
       setError(serverMessage || fallback);
     } finally {
-      setCurrentRowNumber(null);
       setLoading(false);
     }
   }
@@ -482,7 +488,7 @@ export default function EvaluationPage() {
         <h1 className={styles.title}>Document Evaluation</h1>
         <p className={styles.description}>
           XLSX 파일의 첫 번째 시트를 읽고 열 문자(`A`, `B`, `C`...)를 지정하면 각 행의
-          데이터를 순차적으로 읽어 `POST /api/agent/document/generate-test` 요청을 보내고,
+          데이터를 비동기로 처리해 `POST /api/agent/document/generate-test` 요청을 보내고,
           응답의 `medicalCertificate`로 바로 `POST /api/agent/document/evaluate`
           요청까지 이어서 보냅니다. 더미 응답 체크 시 실제 API 대신 로컬 더미 데이터를
           사용합니다.
@@ -542,10 +548,11 @@ export default function EvaluationPage() {
               className={styles.input}
               type="number"
               min={1}
+              max={MAX_BATCH_ROWS}
               step={1}
               value={maxRowsInput}
               onChange={(e) => setMaxRowsInput(e.target.value)}
-              placeholder="비우면 전체 처리"
+              placeholder={`비우면 최대 ${MAX_BATCH_ROWS}개 처리`}
             />
           </label>
 
@@ -569,7 +576,7 @@ export default function EvaluationPage() {
 
           <div className={styles.buttonRow}>
             <button className={styles.button} type="submit" disabled={loading}>
-              {loading ? "순차 처리 중..." : "XLSX 요청 시작"}
+              {loading ? "비동기 처리 중..." : "XLSX 요청 시작"}
             </button>
             <button
               className={styles.secondaryButton}
@@ -597,6 +604,16 @@ export default function EvaluationPage() {
 
         <div className={styles.block}>
           <h2>Progress</h2>
+          {totalRows > 0 && (
+            <div className={styles.progressWrap}>
+              <div className={styles.progressTrack}>
+                <div className={styles.progressBar} style={{ width: `${progressPercent}%` }} />
+              </div>
+              <div className={styles.progressText}>
+                {processedRows}/{totalRows} ({progressPercent}%)
+              </div>
+            </div>
+          )}
           <pre>{toPrettyJson(resultSummary)}</pre>
         </div>
 
@@ -615,7 +632,7 @@ export default function EvaluationPage() {
           <pre>
             {healthCheckResult
               ? toPrettyJson(healthCheckResult)
-              : "(아직 실행 전) 버튼을 눌러 generate-test + evaluate 순차 호출 결과를 확인하세요."}
+              : "(아직 실행 전) 버튼을 눌러 generate-test + evaluate 호출 결과를 확인하세요."}
           </pre>
         </div>
 
