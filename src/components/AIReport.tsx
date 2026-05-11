@@ -4,11 +4,21 @@ import { useState, useRef } from "react";
 import styles from "./AIReport.module.css";
 import { PredictedDisease, uploadAndAnalyzeImage } from "@/services/radiology";
 
+const EXCLUDED_DISEASE_TAGS = new Set(["no_finding", "support_devices"]);
+const MAX_VISIBLE_DISEASES = 3;
+
 interface AIReportProps {
   patientId?: number;
   employeeId?: number;
   deptId?: number;
   entryDate?: string; // yyyy-MM-dd 형식
+}
+
+function getVisiblePredictedDiseases(diseases: PredictedDisease[] | undefined): PredictedDisease[] {
+  return (diseases || [])
+    .filter((item) => item.disease && !EXCLUDED_DISEASE_TAGS.has(item.disease.toLowerCase()))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, MAX_VISIBLE_DISEASES);
 }
 
 export default function AIReport({
@@ -92,7 +102,7 @@ export default function AIReport({
       );
 
       setResultImage(response.heatmapUrl || uploadedImage);
-      setPredictedDiseases(response.predictedDiseases || []);
+      setPredictedDiseases(getVisiblePredictedDiseases(response.predictedDiseases));
       setWarning(response.warning || null);
     } catch (err: unknown) {
       console.error("AI 분석 오류:", err);
