@@ -28,8 +28,8 @@ export default function SignupPage() {
         deptId: deptId || undefined,
       });
       router.push("/login");
-    } catch (err: any) {
-      setError(err?.message ?? "회원가입에 실패했습니다");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "회원가입에 실패했습니다");
     } finally {
       setLoading(false);
     }
