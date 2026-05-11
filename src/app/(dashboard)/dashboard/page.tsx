@@ -533,6 +533,7 @@ export default function DashboardPage() {
             <MedicalCertificate
               selected={selectedCertificate}
               patientInfo={certificatePatient}
+              employeeId={employeeId}
               diagnosisApply={certificateDiagnosisApply}
             />
           </div>

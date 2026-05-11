@@ -1,5 +1,3 @@
-import { post } from "./http/client";
-
 export interface RadiologyReportRequest {
   radiologyRequestId: number;
   patientId: number;
@@ -12,14 +10,15 @@ export interface RadiologyReportRequest {
 }
 
 export interface RadiologyReportResponse {
-  radiologyRequestId: number;
-  patientId: number;
-  employeeId: number;
-  deptId: number;
-  result: boolean; // true => 의심, false => 이상 없음
-  summary: string | null;
-  imageUrl: string | null; // overlay 이미지 경로
-  status: string | null;
+  heatmapUrl: string | null;
+  predictedDiseases: PredictedDisease[];
+  warning: string | null;
+}
+
+export interface PredictedDisease {
+  disease: string;
+  score: number;
+  reason: string;
 }
 
 /**

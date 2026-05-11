@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import styles from "./AIReport.module.css";
-import { uploadAndAnalyzeImage } from "@/services/radiology";
+import { PredictedDisease, uploadAndAnalyzeImage } from "@/services/radiology";
 
 interface AIReportProps {
   patientId?: number;
@@ -19,7 +19,8 @@ export default function AIReport({
 }: AIReportProps) {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [resultImage, setResultImage] = useState<string | null>(null);
-  const [analysisResult, setAnalysisResult] = useState<string | null>(null);
+  const [predictedDiseases, setPredictedDiseases] = useState<PredictedDisease[]>([]);
+  const [warning, setWarning] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -56,7 +57,8 @@ export default function AIReport({
   const handleRemoveImage = () => {
     setUploadedImage(null);
     setResultImage(null);
-    setAnalysisResult(null);
+    setPredictedDiseases([]);
+    setWarning(null);
     setError(null);
     selectedFileRef.current = null;
     if (fileInputRef.current) {
@@ -89,41 +91,15 @@ export default function AIReport({
         entryDate
       );
 
-      // 결과 이미지 URL 생성 (백엔드에서 반환된 상대 경로를 절대 URL로 변환)
-      // Flask에서 반환하는 imageUrl은 "images/..." 또는 "Back-End/images/..." 형식
-      // 스프링 백엔드는 /images/** 경로로 정적 리소스를 제공하므로 /images/... 형식으로 변환
-      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
-      let imageUrl: string | null = null;
-      
-      if (response.imageUrl) {
-        // "Back-End/images/..." 또는 "Back-End/BitComputer/images/..." 형식이면 "images/..."로 변환
-        let normalizedPath = response.imageUrl
-          .replace(/^Back-End\/BitComputer\//, "")
-          .replace(/^Back-End\//, "");
-        
-        // 이미 /images/로 시작하면 그대로 사용, 아니면 /images/ 추가
-        if (!normalizedPath.startsWith("images/") && !normalizedPath.startsWith("/images/")) {
-          normalizedPath = `images/${normalizedPath}`;
-        }
-        
-        // URL 생성 (앞의 / 제거)
-        normalizedPath = normalizedPath.replace(/^\//, "");
-        imageUrl = `${baseUrl}/${normalizedPath}`;
-        
-        console.log("[DEBUG] 이미지 URL 변환:", {
-          original: response.imageUrl,
-          normalized: normalizedPath,
-          final: imageUrl
-        });
-      }
-
-      setResultImage(imageUrl || uploadedImage);
-      setAnalysisResult(response.result ? "의심" : "이상 없음");
-    } catch (err: any) {
+      setResultImage(response.heatmapUrl || uploadedImage);
+      setPredictedDiseases(response.predictedDiseases || []);
+      setWarning(response.warning || null);
+    } catch (err: unknown) {
       console.error("AI 분석 오류:", err);
+      const apiError = err as { response?: { data?: { error?: string } }; message?: string };
       const errorMessage =
-        err.response?.data?.error ||
-        err.message ||
+        apiError.response?.data?.error ||
+        apiError.message ||
         "AI 분석 중 오류가 발생했습니다.";
       setError(errorMessage);
       alert(`AI 분석 실패: ${errorMessage}`);
@@ -199,10 +175,27 @@ export default function AIReport({
         )}
 
         {/* 분석 결과 텍스트 영역 */}
-        {analysisResult && (
+        {(predictedDiseases.length > 0 || warning) && (
           <div className={styles.resultTextSection}>
-            <span className={styles.resultLabel}>분석 결과:</span>
-            <span className={styles.resultValue}>{analysisResult}</span>
+            <div className={styles.resultContent}>
+              <span className={styles.resultLabel}>추론된 상병:</span>
+              {predictedDiseases.length > 0 ? (
+                <ul className={styles.predictionList}>
+                  {predictedDiseases.map((item, index) => (
+                    <li key={`${item.disease}-${index}`} className={styles.predictionItem}>
+                      <div className={styles.predictionHeader}>
+                        <span className={styles.resultValue}>{item.disease}</span>
+                        <span className={styles.score}>{item.score.toFixed(3)}</span>
+                      </div>
+                      <p className={styles.reason}>{item.reason}</p>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <span className={styles.normal}>추론된 상병 없음</span>
+              )}
+              {warning && <p className={styles.warning}>{warning}</p>}
+            </div>
           </div>
         )}
 
