@@ -7,7 +7,10 @@ export interface RadiologyReportRequest {
   memo?: string | null;
   entryDate: string; // yyyy-MM-dd 형식
   detailImageAddress: string;
+  view?: XrayView;
 }
+
+export type XrayView = "AP" | "PA";
 
 export interface RadiologyReportResponse {
   heatmapUrl: string | null;
@@ -38,6 +41,7 @@ export async function uploadAndAnalyzeImage(
   employeeId: number,
   deptId: number,
   entryDate: string,
+  view: XrayView = "PA",
   symptomDetail?: string | null,
   memo?: string | null
 ): Promise<RadiologyReportResponse> {
@@ -47,6 +51,7 @@ export async function uploadAndAnalyzeImage(
   formData.append("employeeId", String(employeeId));
   formData.append("deptId", String(deptId));
   formData.append("entryDate", entryDate);
+  formData.append("view", view);
   if (symptomDetail) {
     formData.append("symptomDetail", symptomDetail);
   }

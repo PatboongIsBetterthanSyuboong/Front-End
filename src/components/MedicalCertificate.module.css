@@ -187,9 +187,9 @@
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  overflow: hidden;
+  overflow: auto;
   min-height: 0;
-  padding: 0;
+  padding: 12px;
 }
 
 .placeholder {
@@ -200,21 +200,21 @@
 /* PDF + 오버레이 레이아웃 — A4 비율(210:297) 유지 */
 .pdfWrapper {
   position: relative;
-  /* 높이 기준으로 A4 비율에 맞는 폭을 자동 계산
-     컬럼 폭이 1fr로 그리드에서 결정되므로 순환 참조 없음 */
-  width: 100%;
-  height: calc(100% - 80px);
+  width: min(100%, 794px);
+  height: auto;
+  max-width: 100%;
   aspect-ratio: 210 / 297;
-  
+  flex: 0 0 auto;
+  container-type: inline-size;
   overflow: hidden;
+  background: #ffffff;
 }
 
 .pdfEmbed {
   position: absolute;
-  top: 0;
-  left: 0%;
+  inset: 0;
+  display: block;
   width: 100%;
-  /* PDF 뷰어 하단 UI 여백(~40px)을 wrapper 밖으로 밀어내고 overflow:hidden으로 잘라냄 */
   height: 100%;
   border: none;
 }
@@ -222,8 +222,7 @@
 /* embed 위를 덮어 스크롤/드래그를 차단 (입력 필드보다 아래 레이어) */
 .scrollBlocker {
   position: absolute;
-  top: 0;
-  left: 0;
+  inset: 0;
   width: 100%;
   height: 100%;
   z-index: 5;
@@ -231,8 +230,7 @@
 
 .fieldsLayer {
   position: absolute;
-  top: 0;
-  left: 0;
+  inset: 0;
   width: 100%;
   height: 100%;
   pointer-events: none;
@@ -241,27 +239,31 @@
 /* 공통 오버레이 스타일 */
 .overlayInput,
 .overlayTextarea,
-.overlayCheckboxLabel {
+.overlayCheckboxLabel,
+.overlaySelect {
   position: absolute;
   pointer-events: all;
   z-index: 10;
 }
 
 .overlayInput,
-.overlayTextarea {
+.overlayTextarea,
+.overlaySelect {
   background: rgba(255, 255, 255, 0.75);
-  border: 1px solid #3b82f6;
-  border-radius: 3px;
-  font-size: 12px;
+  border: max(1px, 0.12cqw) solid #3b82f6;
+  border-radius: 0.38cqw;
+  font-size: 1.5cqw;
   color: #111827;
-  padding: 2px 6px;
+  padding: 0.25cqw 0.76cqw;
   outline: none;
   transition: background 0.15s, border-color 0.15s;
   font-family: inherit;
+  box-sizing: border-box;
 }
 
 .overlayInput:focus,
-.overlayTextarea:focus {
+.overlayTextarea:focus,
+.overlaySelect:focus {
   background: rgba(255, 255, 255, 0.95);
   border-color: #2563eb;
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
@@ -270,27 +272,32 @@
 .overlayInput::placeholder,
 .overlayTextarea::placeholder {
   color: #9ca3af;
-  font-size: 11px;
+  font-size: 1.38cqw;
 }
 
 .overlayInput {
-  height: 24px;
+  height: 3.02cqw;
+}
+
+.overlaySelect {
+  height: 3.27cqw;
+  cursor: pointer;
 }
 
 .overlayTextarea {
   resize: none;
   line-height: 1.4;
-  padding: 4px 6px;
+  padding: 0.5cqw 0.76cqw;
 }
 
 .overlayCheckboxLabel {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 18px;
+  height: 2.3cqw;
   background: rgba(255, 255, 255, 0.75);
-  border: 1px solid #3b82f6;
-  border-radius: 3px;
+  border: max(1px, 0.12cqw) solid #3b82f6;
+  border-radius: 0.38cqw;
   padding: 0;
   box-sizing: border-box;
   cursor: pointer;
@@ -303,8 +310,8 @@
 }
 
 .overlayCheckbox {
-  width: 12px;
-  height: 12px;
+  width: 1.5cqw;
+  height: 1.5cqw;
   margin: 0;
   cursor: pointer;
 }

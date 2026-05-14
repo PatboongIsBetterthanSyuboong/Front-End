@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import styles from "./AIReport.module.css";
-import { PredictedDisease, uploadAndAnalyzeImage } from "@/services/radiology";
+import { PredictedDisease, uploadAndAnalyzeImage, XrayView } from "@/services/radiology";
 
 const EXCLUDED_DISEASE_TAGS = new Set(["no_finding", "support_devices"]);
 const MAX_VISIBLE_DISEASES = 3;
@@ -31,6 +31,7 @@ export default function AIReport({
   const [resultImage, setResultImage] = useState<string | null>(null);
   const [predictedDiseases, setPredictedDiseases] = useState<PredictedDisease[]>([]);
   const [warning, setWarning] = useState<string | null>(null);
+  const [view, setView] = useState<XrayView>("PA");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -98,7 +99,8 @@ export default function AIReport({
         patientId,
         employeeId,
         deptId,
-        entryDate
+        entryDate,
+        view
       );
 
       setResultImage(response.heatmapUrl || uploadedImage);
@@ -162,6 +164,15 @@ export default function AIReport({
           >
             이미지 업로드
           </button>
+          <select
+            className={styles.viewSelect}
+            value={view}
+            onChange={(event) => setView(event.target.value as XrayView)}
+            aria-label="X-ray 촬영 방향"
+          >
+            <option value="PA">PA</option>
+            <option value="AP">AP</option>
+          </select>
           <button 
             className={styles.analyzeButton}
             disabled={!uploadedImage || isLoading}

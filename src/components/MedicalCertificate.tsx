@@ -6,11 +6,10 @@ import html2canvas from "html2canvas";
 import { setAccessToken, setRefreshToken } from "@/lib/auth/token";
 import {
   type DocumentFeedbackType,
-  generateDocumentCertificate,
+  generateDocumentCertificateByHistory,
   HttpError,
   saveDocumentCertificate,
 } from "@/services";
-import { getHistoryDiagnoses, getHistoryDiseases } from "@/services/history";
 import styles from "./MedicalCertificate.module.css";
 import { CertificateItem, CertificateType } from "./CertificateList";
 import type { CertificatePatientInfo } from "./CertificatePatientSearch";
@@ -23,6 +22,7 @@ interface FieldConfig {
   width: string;
   multiline?: boolean;
   checkbox?: boolean;
+  selectOptions?: string[];
   rows?: number;
 }
 
@@ -32,6 +32,14 @@ type FieldValues = Record<string, string>;
 type AiModalResolution =
   | { accepted: true; proposedText: string }
   | { accepted: false };
+
+const PURPOSE_OPTIONS = [
+  "사내 제출용",
+  "학교 제출용",
+  "군대/병무용",
+  "보험사 제출용",
+  "법적 증빙용",
+];
 
 function isAuthTokenEnvelope(data: unknown): data is {
   accessToken?: string;
@@ -80,31 +88,33 @@ function formatKoreanDate(date: Date): string {
 
 const FIELD_CONFIGS: Record<CertificateType, FieldConfig[]> = {
   general: [
-    { id: "patientName",  label: "성명",           top: "18.7%", left: "24%",  width: "180px" },
-    { id: "patientId",    label: "환자번호",        top: "11.4%", left: "24%",  width: "70px" },
-    { id: "idNumber",     label: "주민등록번호",    top: "18.7%", left: "64.5%",  width: "160px" },
-    { id: "diseaseCode",  label: "상병코드",        top: "30%", left: "73.5%",  width: "100px", multiline: true, rows: 6 },
-    { id: "diagnosis",    label: "병명(상병명)",    top: "30%", left: "26%",  width: "300px" },
-    { id: "clinicalEstimate", label: "임상적추정", top: "38.2%", left: "12%", width: "18px", checkbox: true },
-    { id: "finalDiagnosis", label: "최종 진단", top: "40.2%", left: "12%", width: "18px", checkbox: true },
-    { id: "diagnosisExtra", label: "추가 상병명",    top: "34.2%", left: "26%",  width: "300px", multiline: true, rows: 3 },
+    { id: "patientName",  label: "성명",           top: "18.7%", left: "24%",  width: "22.7%" },
+    { id: "patientId",    label: "환자번호",        top: "11.4%", left: "24%",  width: "8.8%" },
+    { id: "idNumber",     label: "주민등록번호",    top: "18.7%", left: "64.5%",  width: "20.2%" },
+    { id: "diseaseCode",  label: "상병코드",        top: "30%", left: "73.5%",  width: "12.6%", multiline: true, rows: 6 },
+    { id: "diagnosis",    label: "병명(상병명)",    top: "30%", left: "26%",  width: "37.8%" },
+    { id: "clinicalEstimate", label: "임상적추정", top: "38.2%", left: "12%", width: "2.3%", checkbox: true },
+    { id: "finalDiagnosis", label: "최종 진단", top: "40.2%", left: "12%", width: "2.3%", checkbox: true },
+    { id: "diagnosisExtra", label: "추가 상병명",    top: "34.2%", left: "26%",  width: "37.8%", multiline: true, rows: 3 },
+    { id: "purpose", label: "용도", top: "74.5%", left: "24%", width: "22.7%", selectOptions: PURPOSE_OPTIONS },
     { id: "opinion",      label: "향후 치료 소견",  top: "50%",   left: "24%",  width: "65%", multiline: true, rows: 7 },
-    { id: "diagnosisDate",    label: "진단일",          top: "46.2%",   left: "64.5%",  width: "160px" },
-    { id: "issueDate",    label: "발급일",          top: "80.5%",   left: "63%",  width: "160px" },
+    { id: "diagnosisDate",    label: "진단일",          top: "46.2%",   left: "64.5%",  width: "20.2%" },
+    { id: "issueDate",    label: "발급일",          top: "80.5%",   left: "63%",  width: "20.2%" },
   ],
   military: [
     // 나중에 추가
-    { id: "patientName",  label: "성명",           top: "18%", left: "22%",  width: "180px" },
-    { id: "patientId",    label: "환자번호",        top: "12.5%", left: "11%",  width: "70px" },
-    { id: "idNumber",     label: "주민등록번호",    top: "18%", left: "50%",  width: "160px" },
-    { id: "diseaseCode",  label: "상병코드",        top: "31.3%", left: "22%",  width: "150px", multiline: true, rows: 3 },
-    { id: "diagnosis",    label: "병명(상병명)",    top: "31.3%", left: "48%",  width: "320px" },
-    { id: "clinicalEstimate", label: "임상적추정", top: "35.5%", left: "35.5%", width: "18px", checkbox: true },
-    { id: "finalDiagnosis", label: "최종 진단", top: "38.5%", left: "35.5%", width: "18px", checkbox: true },
-    { id: "diagnosisExtra", label: "추가 상병명",    top: "35.5%", left: "48%",  width: "320px", multiline: true, rows: 3 },
+    { id: "patientName",  label: "성명",           top: "18%", left: "22%",  width: "22.7%" },
+    { id: "patientId",    label: "환자번호",        top: "12.5%", left: "11%",  width: "8.8%" },
+    { id: "idNumber",     label: "주민등록번호",    top: "18%", left: "50%",  width: "20.2%" },
+    { id: "diseaseCode",  label: "상병코드",        top: "31.3%", left: "22%",  width: "18.9%", multiline: true, rows: 3 },
+    { id: "diagnosis",    label: "병명(상병명)",    top: "31.3%", left: "48%",  width: "40.3%" },
+    { id: "clinicalEstimate", label: "임상적추정", top: "35.5%", left: "35.5%", width: "2.3%", checkbox: true },
+    { id: "finalDiagnosis", label: "최종 진단", top: "38.5%", left: "35.5%", width: "2.3%", checkbox: true },
+    { id: "diagnosisExtra", label: "추가 상병명",    top: "35.5%", left: "48%",  width: "40.3%", multiline: true, rows: 3 },
+    { id: "purpose", label: "용도", top: "74.5%", left: "24%", width: "22.7%", selectOptions: PURPOSE_OPTIONS },
     { id: "opinion",      label: "향후 치료 소견",  top: "50%",   left: "24%",  width: "65%", multiline: true, rows: 7 },
-    { id: "diagnosisDate",    label: "진단일",          top: "46.2%",   left: "64.5%",  width: "160px" },
-    { id: "issueDate",    label: "발급일",          top: "80.5%",   left: "63%",  width: "160px" },
+    { id: "diagnosisDate",    label: "진단일",          top: "46.2%",   left: "64.5%",  width: "20.2%" },
+    { id: "issueDate",    label: "발급일",          top: "80.5%",   left: "63%",  width: "20.2%" },
   ],
 };
 
@@ -134,7 +144,6 @@ interface MedicalCertificateProps {
 export default function MedicalCertificate({
   selected,
   patientInfo,
-  employeeId,
   diagnosisApply = null,
 }: MedicalCertificateProps) {
   const [fieldValues, setFieldValues] = useState<Record<CertificateType, FieldValues>>({
@@ -216,6 +225,26 @@ export default function MedicalCertificate({
     }));
   };
 
+  const handleCheckboxChange = (type: CertificateType, fieldId: string, checked: boolean) => {
+    setFieldValues((prev) => {
+      const next = { ...prev[type], [fieldId]: checked ? "true" : "" };
+      if (checked && fieldId === "clinicalEstimate") {
+        next.finalDiagnosis = "";
+      }
+      if (checked && fieldId === "finalDiagnosis") {
+        next.clinicalEstimate = "";
+      }
+      return { ...prev, [type]: next };
+    });
+  };
+
+  const getDiagnosisKind = (type: CertificateType): string => {
+    const values = fieldValues[type];
+    if (values.finalDiagnosis === "true") return "최종 진단";
+    if (values.clinicalEstimate === "true") return "임상적 추정";
+    return "미선택";
+  };
+
   const handleAiGenerate = async () => {
     if (!selected) return;
     const historyId = diagnosisApply?.historyId;
@@ -230,27 +259,11 @@ export default function MedicalCertificate({
     }
     setAiGenerating(true);
     try {
-      const [diseases, diagnoses] = await Promise.all([
-        getHistoryDiseases(historyId, employeeId),
-        getHistoryDiagnoses(historyId, employeeId),
-      ]);
-      const diseaseCode = diseases
-        .map((item) => item.code.trim())
-        .filter(Boolean)
-        .join(",");
-      const prescriptionCode = diagnoses
-        .map((item) => item.code.trim())
-        .filter(Boolean)
-        .join(",");
-      const prescriptionName = diagnoses
-        .map((item) => item.name.trim())
-        .filter(Boolean)
-        .join(",");
-
-      const res = await generateDocumentCertificate({
-        diseaseCode,
-        prescriptionCode,
-        prescriptionName,
+      const res = await generateDocumentCertificateByHistory({
+        historyId,
+        certificateType: selected.type === "military" ? "MILITARY" : "GENERAL",
+        diagnosisKind: getDiagnosisKind(selected.type),
+        purpose: fieldValues[selected.type].purpose ?? "",
       });
       const text = res.medicalCertificate ?? res.medical_certificate ?? "";
       setResolvedAiRound(null);
@@ -310,7 +323,7 @@ export default function MedicalCertificate({
         scale: 2,
         useCORS: true,
         onclone: (_doc, cloned) => {
-          cloned.querySelectorAll<HTMLElement>("input, textarea").forEach((el) => {
+          cloned.querySelectorAll<HTMLElement>("input, textarea, select").forEach((el) => {
             el.style.background = "transparent";
             el.style.border = "none";
             el.style.boxShadow = "none";
@@ -483,7 +496,7 @@ export default function MedicalCertificate({
         {selected ? (
           <div className={styles.pdfWrapper} ref={wrapperRef}>
             <embed
-              src={`${selected.pdfPath}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
+              src={`${selected.pdfPath}#toolbar=0&navpanes=0&scrollbar=0&view=Fit`}
               type="application/pdf"
               className={styles.pdfEmbed}
             />
@@ -506,10 +519,30 @@ export default function MedicalCertificate({
                       className={styles.overlayCheckbox}
                       checked={fieldValues[selected.type][field.id] === "true"}
                       onChange={(e) =>
-                        handleChange(selected.type, field.id, e.target.checked ? "true" : "")
+                        handleCheckboxChange(selected.type, field.id, e.target.checked)
                       }
                     />
                   </label>
+                ) : field.selectOptions ? (
+                  <select
+                    key={field.id}
+                    className={styles.overlaySelect}
+                    value={fieldValues[selected.type][field.id] ?? ""}
+                    onChange={(e) => handleChange(selected.type, field.id, e.target.value)}
+                    style={{
+                      top: field.top,
+                      left: field.left,
+                      width: field.width,
+                    }}
+                    aria-label={field.label}
+                  >
+                    <option value="">용도 선택</option>
+                    {field.selectOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
                 ) : field.multiline ? (
                   <textarea
                     key={field.id}

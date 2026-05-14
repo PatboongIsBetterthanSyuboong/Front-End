@@ -148,6 +148,7 @@
 
 .resultCode {
   font-weight: 600;
+  font-size: 14px;
   color: #E8C508;
   min-width: 80px;
   margin-right: 12px;
@@ -155,6 +156,7 @@
 
 .resultName {
   flex: 1;
+  font-size: 14px;
   color: white;
 }
 

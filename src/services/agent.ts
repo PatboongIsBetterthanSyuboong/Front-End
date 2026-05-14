@@ -6,6 +6,16 @@ export interface DocumentGenerateRequest {
   diseaseCode: string;
   prescriptionCode: string;
   prescriptionName: string;
+  certificateType?: "GENERAL" | "MILITARY";
+  diagnosisKind?: string;
+  purpose?: string;
+}
+
+export interface DocumentGenerateByHistoryRequest {
+  historyId: number;
+  certificateType?: "GENERAL" | "MILITARY";
+  diagnosisKind?: string;
+  purpose?: string;
 }
 
 export interface DocumentEvaluateRequest {
@@ -47,6 +57,16 @@ export async function generateDocumentCertificate(
 ): Promise<DocumentGenerateResponse> {
   return post<DocumentGenerateResponse, DocumentGenerateRequest>(
     "/api/agent/document/generate-test",
+    body,
+    { timeout: DOCUMENT_API_TIMEOUT_MS }
+  );
+}
+
+export async function generateDocumentCertificateByHistory(
+  body: DocumentGenerateByHistoryRequest
+): Promise<DocumentGenerateResponse> {
+  return post<DocumentGenerateResponse, DocumentGenerateByHistoryRequest>(
+    "/api/agent/document/generate",
     body,
     { timeout: DOCUMENT_API_TIMEOUT_MS }
   );

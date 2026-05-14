@@ -75,6 +75,18 @@ export interface HistoryListResponse {
   histories: HistoryEntry[];
 }
 
+export interface ValidationResultItem {
+  id: number;
+  eventId: number;
+  historyId: number;
+  overallStatus: "PASS" | "WARNING" | "CRITICAL" | "NEEDS_REVIEW" | string;
+  summary: string;
+  resultJson: string;
+  shouldNotifyDoctor: boolean;
+  shouldBlockAutoPrescription: boolean;
+  createdAt: string;
+}
+
 export async function createHistory(payload: HistoryPayload): Promise<HistoryResponse> {
   return post<HistoryResponse, HistoryPayload>("/api/histories/write_history", payload);
 }
@@ -137,6 +149,26 @@ export async function getHistoryDiagnoses(
   return get<HistoryDiagnoseResponse[]>(`/api/histories/${historyId}/get_diagnoses`, {
     params: { employeeId },
   });
+}
+
+export async function getValidationResults(
+  historyId: number,
+  employeeId: number
+): Promise<ValidationResultItem[]> {
+  return get<ValidationResultItem[]>(`/api/histories/${historyId}/validation_results`, {
+    params: { employeeId },
+  });
+}
+
+export async function runValidationAgent(
+  historyId: number,
+  employeeId: number
+): Promise<ValidationResultItem[]> {
+  return post<ValidationResultItem[], undefined>(
+    `/api/histories/${historyId}/validation_results/run`,
+    undefined,
+    { params: { employeeId }, timeout: 180_000 }
+  );
 }
 
 /** Spring → Python prescription_api → Gemini 등 연쇄 호출용 (기본 axios 15초 초과 방지) */
