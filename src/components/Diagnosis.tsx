@@ -5,10 +5,12 @@ import { useMedicalSelection, type PrescriptionFeedbackItem } from "@store/medic
 import styles from "./Diagnosis.module.css";
 import { ClinicVisitContext } from "@/types/clinic";
 import {
+  getValidationJob,
   recommendPrescriptions,
   savePrescriptionFeedback,
   setHistoryDiagnoses,
   type RecommendedPrescriptionItem,
+  type ValidationJobResponse,
 } from "@/services/history";
 import { HttpError } from "@/services/http/types";
 
@@ -25,6 +27,7 @@ export default function Diagnosis({ clinicVisit, ensureHistory, employeeId, onHi
   const [generating, setGenerating] = useState(false);
   const [aiRecommendations, setAiRecommendations] = useState<RecommendedPrescriptionItem[]>([]);
   const [selectedRecommendationKeys, setSelectedRecommendationKeys] = useState<string[]>([]);
+  const [validationModal, setValidationModal] = useState<ValidationJobResponse | null>(null);
   const [aiSessionHistoryId, setAiSessionHistoryId] = useState<number | null>(null);
   const [aiSessionHistoryDiagnoseId, setAiSessionHistoryDiagnoseId] = useState<number | null>(null);
   const prevPatientIdRef = useRef<number | null>(null);
@@ -132,25 +135,30 @@ export default function Diagnosis({ clinicVisit, ensureHistory, employeeId, onHi
         use_example_context: false,
         disease_codes: diseases.map((d) => d.code),
       });
-      const recommended = response.recommended_prescriptions ?? [];
+      const job = await pollValidationJob(response.jobId);
+      if (job.status === "FAILED") {
+        throw new Error(job.lastError || "검증 에이전트 작업이 실패했습니다.");
+      }
+      const result = job.result ?? {};
+      const recommended =
+        result.recommendedPrescriptions ??
+        result.candidatePrescriptions ??
+        [];
 
       if (recommended.length === 0) {
         alert(
-          "AI 추천 결과가 비어 있습니다.\n\n" +
-            "/health 가 정상이어도, Spring(8080)→Python(8001) POST는 별도입니다.\n" +
-            "• 백엔드 로그: 「Python 처방 에이전트 호출 실패」또는「응답 없음」\n" +
-            "• application.properties 의 ai.prescription-agent.base-url (기본 http://localhost:8001)\n" +
-            "• 수동으로 띄운 Python 이면 Spring embed 와 포트 중복 여부"
+          "AI 추천/검증 결과가 비어 있습니다. 검증 요약을 확인해주세요."
         );
+        setValidationModal(job);
         return;
       }
 
       setAiRecommendations(recommended);
       setSelectedRecommendationKeys(recommended.map((item) => `${item.rank}:${item.prescription_code}:${item.prescription_name}`));
       setAiSessionHistoryId(historyId);
-      setAiSessionHistoryDiagnoseId(response.history_diagnose_id ?? null);
+      setAiSessionHistoryDiagnoseId(null);
       clearPrescriptionFeedback();
-      alert("AI 추천이 생성되었습니다. 아래 추천 목록에서 선택 후 '선택 처방 반영'을 눌러주세요.");
+      setValidationModal(job);
     } catch (error) {
       console.error("AI 처방 생성 실패:", error);
       const hint =
@@ -167,6 +175,18 @@ export default function Diagnosis({ clinicVisit, ensureHistory, employeeId, onHi
       setGenerating(false);
     }
   }, [clearPrescriptionFeedback, clinicVisit, diseases, ensureHistory]);
+
+  const pollValidationJob = async (jobId: string): Promise<ValidationJobResponse> => {
+    const maxAttempts = 90;
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      const job = await getValidationJob(jobId);
+      if (job.status === "DONE" || job.status === "FAILED") {
+        return job;
+      }
+      await new Promise((resolve) => window.setTimeout(resolve, 2000));
+    }
+    throw new Error("검증 에이전트 응답 대기 시간이 초과되었습니다.");
+  };
 
   const toggleRecommendation = useCallback((key: string) => {
     setSelectedRecommendationKeys((prev) =>
@@ -252,6 +272,42 @@ export default function Diagnosis({ clinicVisit, ensureHistory, employeeId, onHi
 
   return (
     <div className={styles.container}>
+      {validationModal && (
+        <div className={styles.modalBackdrop} role="presentation">
+          <div className={styles.modalPanel} role="dialog" aria-modal="true">
+            <h3 className={styles.modalTitle}>검증 완료</h3>
+            <div className={styles.modalCard}>
+              <div className={styles.modalCardHead}>
+                <span className={styles.modalRank}>
+                  {validationModal.result?.overallStatus ?? validationModal.status}
+                </span>
+              </div>
+              <p className={styles.modalReason}>
+                {validationModal.result?.summary ?? validationModal.summary ?? "검증 결과를 확인했습니다."}
+              </p>
+              {(
+                validationModal.result?.recommendedPrescriptions ??
+                validationModal.result?.candidatePrescriptions ??
+                []
+              ).slice(0, 3).map((item) => (
+                <div
+                  key={`${item.rank}-${item.prescription_code}-${item.prescription_name}`}
+                  className={styles.modalName}
+                >
+                  [{item.rank}] {item.prescription_name} ({item.prescription_code})
+                </div>
+              ))}
+            </div>
+            <button
+              type="button"
+              className={styles.modalCloseBtn}
+              onClick={() => setValidationModal(null)}
+            >
+              확인
+            </button>
+          </div>
+        </div>
+      )}
       <div className={styles.header}>
         <h3>처방</h3>
         <div className={styles.controls}>
@@ -261,7 +317,7 @@ export default function Diagnosis({ clinicVisit, ensureHistory, employeeId, onHi
             onClick={handleGenerateByAI}
             disabled={generating}
           >
-            {generating ? "생성 중..." : "AI 생성"}
+            {generating ? "추천/검증 중..." : "AI 처방 추천"}
           </button>
           <button
             type="button"

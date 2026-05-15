@@ -3,30 +3,27 @@
 import { useEffect, useRef, useState } from "react";
 import { PDFDocument } from "pdf-lib";
 import html2canvas from "html2canvas";
-import { setAccessToken, setRefreshToken } from "@/lib/auth/token";
 import {
-  type DocumentFeedbackType,
   generateDocumentCertificateByHistory,
   HttpError,
-  saveDocumentCertificate,
 } from "@/services";
 import styles from "./MedicalCertificate.module.css";
 import { CertificateItem, CertificateType } from "./CertificateList";
 import type { CertificatePatientInfo } from "./CertificatePatientSearch";
 
-interface FieldConfig {
+type FieldValues = Record<string, string>;
+
+type TemplateControlType = "input" | "textarea" | "checkbox" | "select";
+
+interface TemplateControl {
   id: string;
-  label: string;
+  type: TemplateControlType;
   top: string;
   left: string;
   width: string;
-  multiline?: boolean;
-  checkbox?: boolean;
-  selectOptions?: string[];
+  height: string;
   rows?: number;
 }
-
-type FieldValues = Record<string, string>;
 
 /** AI 미리보기 모달에서 수락·거절 후 저장 시 APPROVE/REJECT/MODIFY 판단에 사용 */
 type AiModalResolution =
@@ -41,42 +38,50 @@ const PURPOSE_OPTIONS = [
   "법적 증빙용",
 ];
 
-function isAuthTokenEnvelope(data: unknown): data is {
-  accessToken?: string;
-  refreshToken?: string;
-  grantType?: string;
-} {
-  if (typeof data !== "object" || data === null) return false;
-  return typeof (data as { accessToken?: unknown }).accessToken === "string";
-}
+const TEMPLATE_IMAGES: Record<CertificateType, string> = {
+  general: "/certificates/general.png",
+  military: "/certificates/military.png",
+};
 
-/** 저장 API가 JWT 묶음만 주는 경우 모달에 토큰을 노출하지 않음 */
-function applySaveResponseTokens(data: unknown): void {
-  if (!isAuthTokenEnvelope(data)) return;
-  if (data.accessToken) setAccessToken(data.accessToken);
-  if (data.refreshToken) setRefreshToken(data.refreshToken);
-}
+const STAMP_IMAGE = "/certificates/logo-removebg-preview.png";
 
-function formatSaveResultPayload(data: unknown): string {
-  if (data == null || data === "") return "저장이 완료되었습니다.";
-  if (typeof data === "string") return data;
-  if (
-    typeof data === "object" &&
-    data !== null &&
-    "message" in data &&
-    typeof (data as { message: unknown }).message === "string"
-  ) {
-    return (data as { message: string }).message;
-  }
-  if (isAuthTokenEnvelope(data)) {
-    return "저장이 완료되었습니다.";
-  }
-  try {
-    return JSON.stringify(data, null, 2);
-  } catch {
-    return "저장이 완료되었습니다.";
-  }
-}
+const TEMPLATE_CONTROLS: Record<CertificateType, TemplateControl[]> = {
+  general: [
+    { id: "patientId", type: "input", top: "9.7%", left: "23.8%", width: "11.4%", height: "3.2%" },
+    { id: "patientName", type: "input", top: "16.4%", left: "23.6%", width: "27.8%", height: "4.1%" },
+    { id: "idNumber", type: "input", top: "16.4%", left: "64.8%", width: "25.1%", height: "4.1%" },
+    { id: "diagnosis", type: "input", top: "28.1%", left: "26.0%", width: "43.0%", height: "3.8%" },
+    { id: "diagnosisExtra", type: "textarea", top: "36.0%", left: "26.0%", width: "43.0%", height: "7.4%", rows: 3 },
+    { id: "diseaseCode", type: "textarea", top: "27.8%", left: "73.2%", width: "16.7%", height: "17.2%", rows: 5 },
+    { id: "clinicalEstimate", type: "checkbox", top: "38.7%", left: "12.0%", width: "1.8%", height: "1.8%" },
+    { id: "finalDiagnosis", type: "checkbox", top: "41.1%", left: "12.0%", width: "1.8%", height: "1.8%" },
+    { id: "diagnosisDate", type: "input", top: "46.1%", left: "64.6%", width: "22.6%", height: "3.4%" },
+    { id: "opinion", type: "textarea", top: "51.2%", left: "23.5%", width: "66.3%", height: "14.9%", rows: 6 },
+    { id: "purpose", type: "select", top: "70.1%", left: "23.5%", width: "66.3%", height: "3.4%" },
+  ],
+  military: [
+    { id: "patientName", type: "input", top: "15.7%", left: "21.1%", width: "27.0%", height: "4.6%" },
+    { id: "idNumber", type: "input", top: "15.7%", left: "49.0%", width: "24.0%", height: "4.6%" },
+    { id: "diagnosis", type: "input", top: "30.9%", left: "21.0%", width: "33.0%", height: "2.5%" },
+    { id: "clinicalEstimate", type: "checkbox", top: "31.5%", left: "39.0%", width: "1.4%", height: "1.4%" },
+    { id: "finalDiagnosis", type: "checkbox", top: "31.5%", left: "47.5%", width: "1.4%", height: "1.4%" },
+    { id: "diseaseCode", type: "input", top: "30.9%", left: "72.0%", width: "17.4%", height: "2.5%" },
+    { id: "diagnosisDate", type: "input", top: "34.1%", left: "34.0%", width: "18.0%", height: "2.4%" },
+    { id: "diagnosisExtra", type: "textarea", top: "40.1%", left: "21.0%", width: "68.8%", height: "4.6%", rows: 2 },
+    { id: "opinion", type: "textarea", top: "45.0%", left: "21.0%", width: "68.8%", height: "10.1%", rows: 4 },
+  ],
+};
+
+const STAMP_POSITIONS: Record<CertificateType, Array<{ top: string; left: string; width: string }>> = {
+  general: [
+    { top: "8.0%", left: "78.8%", width: "7.8%" },
+    { top: "85.2%", left: "73.5%", width: "8.2%" },
+  ],
+  military: [
+    { top: "20.8%", left: "87.7%", width: "4.2%" },
+    { top: "78.5%", left: "58.0%", width: "8.5%" },
+  ],
+};
 
 /** 로컬 기준 `YYYY년 MM월 DD일` (진단일·발급일 등) */
 function formatKoreanDate(date: Date): string {
@@ -85,38 +90,6 @@ function formatKoreanDate(date: Date): string {
   const d = String(date.getDate()).padStart(2, "0");
   return `${y}년 ${m}월 ${d}일`;
 }
-
-const FIELD_CONFIGS: Record<CertificateType, FieldConfig[]> = {
-  general: [
-    { id: "patientName",  label: "성명",           top: "18.7%", left: "24%",  width: "22.7%" },
-    { id: "patientId",    label: "환자번호",        top: "11.4%", left: "24%",  width: "8.8%" },
-    { id: "idNumber",     label: "주민등록번호",    top: "18.7%", left: "64.5%",  width: "20.2%" },
-    { id: "diseaseCode",  label: "상병코드",        top: "30%", left: "73.5%",  width: "12.6%", multiline: true, rows: 6 },
-    { id: "diagnosis",    label: "병명(상병명)",    top: "30%", left: "26%",  width: "37.8%" },
-    { id: "clinicalEstimate", label: "임상적추정", top: "38.2%", left: "12%", width: "2.3%", checkbox: true },
-    { id: "finalDiagnosis", label: "최종 진단", top: "40.2%", left: "12%", width: "2.3%", checkbox: true },
-    { id: "diagnosisExtra", label: "추가 상병명",    top: "34.2%", left: "26%",  width: "37.8%", multiline: true, rows: 3 },
-    { id: "purpose", label: "용도", top: "74.5%", left: "24%", width: "22.7%", selectOptions: PURPOSE_OPTIONS },
-    { id: "opinion",      label: "향후 치료 소견",  top: "50%",   left: "24%",  width: "65%", multiline: true, rows: 7 },
-    { id: "diagnosisDate",    label: "진단일",          top: "46.2%",   left: "64.5%",  width: "20.2%" },
-    { id: "issueDate",    label: "발급일",          top: "80.5%",   left: "63%",  width: "20.2%" },
-  ],
-  military: [
-    // 나중에 추가
-    { id: "patientName",  label: "성명",           top: "18%", left: "22%",  width: "22.7%" },
-    { id: "patientId",    label: "환자번호",        top: "12.5%", left: "11%",  width: "8.8%" },
-    { id: "idNumber",     label: "주민등록번호",    top: "18%", left: "50%",  width: "20.2%" },
-    { id: "diseaseCode",  label: "상병코드",        top: "31.3%", left: "22%",  width: "18.9%", multiline: true, rows: 3 },
-    { id: "diagnosis",    label: "병명(상병명)",    top: "31.3%", left: "48%",  width: "40.3%" },
-    { id: "clinicalEstimate", label: "임상적추정", top: "35.5%", left: "35.5%", width: "2.3%", checkbox: true },
-    { id: "finalDiagnosis", label: "최종 진단", top: "38.5%", left: "35.5%", width: "2.3%", checkbox: true },
-    { id: "diagnosisExtra", label: "추가 상병명",    top: "35.5%", left: "48%",  width: "40.3%", multiline: true, rows: 3 },
-    { id: "purpose", label: "용도", top: "74.5%", left: "24%", width: "22.7%", selectOptions: PURPOSE_OPTIONS },
-    { id: "opinion",      label: "향후 치료 소견",  top: "50%",   left: "24%",  width: "65%", multiline: true, rows: 7 },
-    { id: "diagnosisDate",    label: "진단일",          top: "46.2%",   left: "64.5%",  width: "20.2%" },
-    { id: "issueDate",    label: "발급일",          top: "80.5%",   left: "63%",  width: "20.2%" },
-  ],
-};
 
 /** 환자 정보에서 필드 ID로 자동 채울 수 있는 매핑 */
 const PATIENT_FIELD_MAP: Partial<Record<string, keyof CertificatePatientInfo>> = {
@@ -155,8 +128,7 @@ export default function MedicalCertificate({
   const [noticeModal, setNoticeModal] = useState<string | null>(null);
   const [aiPreviewModal, setAiPreviewModal] = useState<{ text: string } | null>(null);
   const [resolvedAiRound, setResolvedAiRound] = useState<AiModalResolution | null>(null);
-  const fieldsLayerRef = useRef<HTMLDivElement>(null);
-  const wrapperRef = useRef<HTMLDivElement>(null);
+  const certificatePageRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setAiPreviewModal(null);
@@ -166,15 +138,14 @@ export default function MedicalCertificate({
   // 진단서 종류 선택 시 진단일·발급일을 오늘(로컬) 날짜로 채움
   useEffect(() => {
     if (!selected) return;
-    const configs = FIELD_CONFIGS[selected.type];
     const today = formatKoreanDate(new Date());
-    const patch: FieldValues = {};
-    if (configs.some((f) => f.id === "diagnosisDate")) patch.diagnosisDate = today;
-    if (configs.some((f) => f.id === "issueDate")) patch.issueDate = today;
-    if (Object.keys(patch).length === 0) return;
     setFieldValues((prev) => ({
       ...prev,
-      [selected.type]: { ...prev[selected.type], ...patch },
+      [selected.type]: {
+        ...prev[selected.type],
+        diagnosisDate: prev[selected.type].diagnosisDate ?? today,
+        issueDate: prev[selected.type].issueDate ?? today,
+      },
     }));
   }, [selected]);
 
@@ -182,11 +153,8 @@ export default function MedicalCertificate({
   useEffect(() => {
     if (!patientInfo || !selected) return;
 
-    const fields = FIELD_CONFIGS[selected.type];
     const autoFilled: FieldValues = {};
-
-    fields.forEach(({ id }) => {
-      const patientKey = PATIENT_FIELD_MAP[id];
+    Object.entries(PATIENT_FIELD_MAP).forEach(([id, patientKey]) => {
       if (patientKey) {
         const value = patientInfo[patientKey];
         if (value) autoFilled[id] = String(value);
@@ -203,18 +171,14 @@ export default function MedicalCertificate({
 
   useEffect(() => {
     if (!diagnosisApply || !selected) return;
-    const configs = FIELD_CONFIGS[selected.type];
-    const hasField = (id: string) => configs.some((f) => f.id === id);
-    const patch: FieldValues = {};
-    if (hasField("diseaseCode")) patch.diseaseCode = diagnosisApply.diseaseCode;
-    if (hasField("diagnosis")) patch.diagnosis = diagnosisApply.primaryDiseaseName;
-    if (hasField("diagnosisExtra")) {
-      patch.diagnosisExtra = diagnosisApply.additionalDiseaseNames;
-    }
-    if (Object.keys(patch).length === 0) return;
     setFieldValues((prev) => ({
       ...prev,
-      [selected.type]: { ...prev[selected.type], ...patch },
+      [selected.type]: {
+        ...prev[selected.type],
+        diseaseCode: diagnosisApply.diseaseCode,
+        diagnosis: diagnosisApply.primaryDiseaseName,
+        diagnosisExtra: diagnosisApply.additionalDiseaseNames,
+      },
     }));
   }, [diagnosisApply, selected]);
 
@@ -252,18 +216,13 @@ export default function MedicalCertificate({
       setNoticeModal("진단서에 상병을 먼저 적용해 주세요.");
       return;
     }
-    const configs = FIELD_CONFIGS[selected.type];
-    if (!configs.some((f) => f.id === "opinion")) {
-      setNoticeModal("이 진단서 유형에는 향후 치료 소견 필드가 없습니다.");
-      return;
-    }
     setAiGenerating(true);
     try {
       const res = await generateDocumentCertificateByHistory({
         historyId,
         certificateType: selected.type === "military" ? "MILITARY" : "GENERAL",
         diagnosisKind: getDiagnosisKind(selected.type),
-        purpose: fieldValues[selected.type].purpose ?? "",
+        purpose: selected.type === "general" ? fieldValues[selected.type].purpose ?? "" : "",
       });
       const text = res.medicalCertificate ?? res.medical_certificate ?? "";
       setResolvedAiRound(null);
@@ -282,95 +241,48 @@ export default function MedicalCertificate({
     }
   };
 
-  const handleSave = async () => {
-    if (!selected || !fieldsLayerRef.current || !wrapperRef.current) return;
-    const historyId = diagnosisApply?.historyId;
-    if (historyId == null) {
-      setNoticeModal("진단서에 상병을 먼저 적용해 주세요.");
-      return;
-    }
-
+  const handleDownload = async () => {
+    if (!selected || !certificatePageRef.current) return;
     if (aiPreviewModal != null) {
       setNoticeModal("AI 생성 내용에 먼저 수락 또는 거절을 선택해 주세요.");
       return;
     }
-
-    const savedMedicalCertificate =
-      fieldValues[selected.type].opinion ?? "";
-
-    let agentUsed = false;
-    let originalMedicalCertificate = "";
-    let feedbackType: DocumentFeedbackType;
-
-    if (resolvedAiRound == null) {
-      feedbackType = "NONE";
-    } else if (!resolvedAiRound.accepted) {
-      feedbackType = "REJECT";
-    } else {
-      agentUsed = true;
-      originalMedicalCertificate = resolvedAiRound.proposedText;
-      feedbackType =
-        savedMedicalCertificate.trim() ===
-        resolvedAiRound.proposedText.trim()
-          ? "APPROVE"
-          : "MODIFY";
-    }
-
     setSaving(true);
     try {
-      const canvas = await html2canvas(fieldsLayerRef.current, {
-        backgroundColor: null,
+      const canvas = await html2canvas(certificatePageRef.current, {
+        backgroundColor: "#ffffff",
         scale: 2,
         useCORS: true,
         onclone: (_doc, cloned) => {
           cloned.querySelectorAll<HTMLElement>("input, textarea, select").forEach((el) => {
-            el.style.background = "transparent";
-            el.style.border = "none";
             el.style.boxShadow = "none";
             el.style.outline = "none";
-            el.style.padding = "0";
           });
         },
       });
       const pngDataUrl = canvas.toDataURL("image/png");
       const pngBytes = await fetch(pngDataUrl).then((r) => r.arrayBuffer());
-
-      const pdfBytes = await fetch(selected.pdfPath).then((r) => r.arrayBuffer());
-      const pdfDoc = await PDFDocument.load(pdfBytes);
-      const page = pdfDoc.getPages()[0];
-      const { width, height } = page.getSize();
-
+      const pdfDoc = await PDFDocument.create();
+      const page = pdfDoc.addPage([595.28, 841.89]);
       const pngImage = await pdfDoc.embedPng(pngBytes);
+      const { width, height } = page.getSize();
       page.drawImage(pngImage, { x: 0, y: 0, width, height });
 
       const savedBytes = await pdfDoc.save();
       const blob = new Blob([savedBytes.buffer as ArrayBuffer], {
         type: "application/pdf",
       });
-      const pdfFile = new File([blob], `${selected.label}.pdf`, {
-        type: "application/pdf",
-      });
-
-      const formData = new FormData();
-      formData.append("historyId", String(historyId));
-      formData.append("pdfFile", pdfFile);
-      formData.append("agentUsed", String(agentUsed));
-      formData.append("originalMedicalCertificate", originalMedicalCertificate);
-      formData.append("savedMedicalCertificate", savedMedicalCertificate);
-      formData.append("feedbackType", feedbackType);
-
-      const result = await saveDocumentCertificate(formData);
-      applySaveResponseTokens(result);
-      setNoticeModal(formatSaveResultPayload(result));
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      const patientName = fieldValues[selected.type].patientName || "진단서";
+      link.href = url;
+      link.download = `${selected.label}_${patientName}.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+      setNoticeModal("PDF 다운로드가 완료되었습니다.");
     } catch (error: unknown) {
-      console.error("진단서 저장 실패", error);
-      if (error instanceof HttpError) {
-        setNoticeModal(
-          `저장에 실패했습니다. [${error.status}] ${error.message}`
-        );
-      } else {
-        setNoticeModal("저장에 실패했습니다. 잠시 후 다시 시도해 주세요.");
-      }
+      console.error("진단서 PDF 생성 실패", error);
+      setNoticeModal("PDF 생성에 실패했습니다. 잠시 후 다시 시도해 주세요.");
     } finally {
       setSaving(false);
     }
@@ -390,6 +302,77 @@ export default function MedicalCertificate({
   const handleAiPreviewReject = () => {
     setResolvedAiRound({ accepted: false });
     setAiPreviewModal(null);
+  };
+
+  const renderTemplateControl = (control: TemplateControl) => {
+    if (!selected) return null;
+    const type = selected.type;
+    const commonStyle = {
+      top: control.top,
+      left: control.left,
+      width: control.width,
+      height: control.height,
+    };
+
+    if (control.type === "checkbox") {
+      return (
+        <input
+          key={control.id}
+          type="checkbox"
+          className={styles.templateCheckbox}
+          style={commonStyle}
+          checked={fieldValues[type][control.id] === "true"}
+          onChange={(e) => handleCheckboxChange(type, control.id, e.target.checked)}
+          aria-label={control.id}
+        />
+      );
+    }
+
+    if (control.type === "select") {
+      return (
+        <select
+          key={control.id}
+          className={styles.templateSelect}
+          style={commonStyle}
+          value={fieldValues[type][control.id] ?? ""}
+          onChange={(e) => handleChange(type, control.id, e.target.value)}
+          aria-label="용도"
+        >
+          <option value="">용도 선택</option>
+          {PURPOSE_OPTIONS.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      );
+    }
+
+    if (control.type === "textarea") {
+      return (
+        <textarea
+          key={control.id}
+          className={styles.templateTextarea}
+          style={commonStyle}
+          rows={control.rows ?? 3}
+          value={fieldValues[type][control.id] ?? ""}
+          onChange={(e) => handleChange(type, control.id, e.target.value)}
+          aria-label={control.id}
+        />
+      );
+    }
+
+    return (
+      <input
+        key={control.id}
+        type="text"
+        className={styles.templateInput}
+        style={commonStyle}
+        value={fieldValues[type][control.id] ?? ""}
+        onChange={(e) => handleChange(type, control.id, e.target.value)}
+        aria-label={control.id}
+      />
+    );
   };
 
   return (
@@ -480,7 +463,7 @@ export default function MedicalCertificate({
           <button
             type="button"
             className={styles.saveButton}
-            onClick={handleSave}
+            onClick={handleDownload}
             disabled={
               !selected ||
               saving ||
@@ -488,91 +471,31 @@ export default function MedicalCertificate({
               aiPreviewModal != null
             }
           >
-            {saving ? "저장 중…" : "저장"}
+            {saving ? "PDF 생성 중…" : "PDF 다운로드"}
           </button>
         </div>
       </div>
       <div className={styles.body}>
         {selected ? (
-          <div className={styles.pdfWrapper} ref={wrapperRef}>
-            <embed
-              src={`${selected.pdfPath}#toolbar=0&navpanes=0&scrollbar=0&view=Fit`}
-              type="application/pdf"
-              className={styles.pdfEmbed}
+          <div className={styles.certificatePage} ref={certificatePageRef}>
+            <img
+              src={TEMPLATE_IMAGES[selected.type]}
+              alt={selected.label}
+              className={styles.templateImage}
+              draggable={false}
             />
-            {/* embed 위에 씌워 스크롤/클릭을 차단하는 투명 레이어 */}
-            <div className={styles.scrollBlocker} />
-            <div className={styles.fieldsLayer} ref={fieldsLayerRef}>
-              {FIELD_CONFIGS[selected.type].map((field) =>
-                field.checkbox ? (
-                  <label
-                    key={field.id}
-                    className={styles.overlayCheckboxLabel}
-                    style={{
-                      top: field.top,
-                      left: field.left,
-                      width: field.width,
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      className={styles.overlayCheckbox}
-                      checked={fieldValues[selected.type][field.id] === "true"}
-                      onChange={(e) =>
-                        handleCheckboxChange(selected.type, field.id, e.target.checked)
-                      }
-                    />
-                  </label>
-                ) : field.selectOptions ? (
-                  <select
-                    key={field.id}
-                    className={styles.overlaySelect}
-                    value={fieldValues[selected.type][field.id] ?? ""}
-                    onChange={(e) => handleChange(selected.type, field.id, e.target.value)}
-                    style={{
-                      top: field.top,
-                      left: field.left,
-                      width: field.width,
-                    }}
-                    aria-label={field.label}
-                  >
-                    <option value="">용도 선택</option>
-                    {field.selectOptions.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
-                ) : field.multiline ? (
-                  <textarea
-                    key={field.id}
-                    className={styles.overlayTextarea}
-                    placeholder={field.label}
-                    value={fieldValues[selected.type][field.id] ?? ""}
-                    rows={field.rows ?? 3}
-                    onChange={(e) => handleChange(selected.type, field.id, e.target.value)}
-                    style={{
-                      top: field.top,
-                      left: field.left,
-                      width: field.width,
-                    }}
-                  />
-                ) : (
-                  <input
-                    key={field.id}
-                    type="text"
-                    className={styles.overlayInput}
-                    placeholder={field.label}
-                    value={fieldValues[selected.type][field.id] ?? ""}
-                    onChange={(e) => handleChange(selected.type, field.id, e.target.value)}
-                    style={{
-                      top: field.top,
-                      left: field.left,
-                      width: field.width,
-                    }}
-                  />
-                )
-              )}
+            <div className={styles.templateOverlay}>
+              {TEMPLATE_CONTROLS[selected.type].map(renderTemplateControl)}
+              {STAMP_POSITIONS[selected.type].map((stamp, index) => (
+                <img
+                  key={`${selected.type}-stamp-${index}`}
+                  src={STAMP_IMAGE}
+                  alt=""
+                  className={styles.stampImage}
+                  style={stamp}
+                  draggable={false}
+                />
+              ))}
             </div>
           </div>
         ) : (

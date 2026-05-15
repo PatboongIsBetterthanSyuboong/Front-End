@@ -197,6 +197,149 @@
   font-size: 14px;
 }
 
+.certificatePage {
+  width: min(100%, 794px);
+  min-height: 1123px;
+  padding: 56px 64px;
+  background: #ffffff;
+  color: #111827;
+  box-sizing: border-box;
+  font-family: "Malgun Gothic", "Apple SD Gothic Neo", Arial, sans-serif;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.certificateTop {
+  position: relative;
+  margin-bottom: 28px;
+  text-align: center;
+}
+
+.certificateKind {
+  position: absolute;
+  top: 3px;
+  left: 0;
+  padding: 4px 10px;
+  border: 1px solid #111827;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.certificateTitle {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+}
+
+.section {
+  margin-bottom: 18px;
+}
+
+.sectionTitle {
+  margin: 0 0 8px;
+  padding: 6px 10px;
+  background: #f3f4f6;
+  border: 1px solid #111827;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 12px;
+}
+
+.formField {
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr);
+  align-items: stretch;
+  min-height: 38px;
+  border: 1px solid #111827;
+  background: #ffffff;
+}
+
+.formFieldWide {
+  grid-column: 1 / -1;
+}
+
+.formField span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-right: 1px solid #111827;
+  background: #f9fafb;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.formField input,
+.formField textarea,
+.purposeSelect,
+.opinionTextarea {
+  width: 100%;
+  border: none;
+  background: #ffffff;
+  color: #111827;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.45;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.formField input {
+  padding: 8px 10px;
+}
+
+.formField textarea {
+  resize: vertical;
+  padding: 8px 10px;
+}
+
+.checkboxGroup {
+  display: flex;
+  gap: 24px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid #111827;
+}
+
+.checkboxGroup label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.checkboxGroup input {
+  width: 14px;
+  height: 14px;
+}
+
+.purposeSelect {
+  height: 38px;
+  padding: 8px 10px;
+  border: 1px solid #111827;
+}
+
+.opinionTextarea {
+  min-height: 150px;
+  padding: 12px;
+  border: 1px solid #111827;
+  resize: vertical;
+}
+
+.footerNote {
+  margin-top: 26px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 700;
+}
+
 /* PDF + 오버레이 레이아웃 — A4 비율(210:297) 유지 */
 .pdfWrapper {
   position: relative;
@@ -314,4 +457,83 @@
   height: 1.5cqw;
   margin: 0;
   cursor: pointer;
+}
+
+.certificatePage {
+  position: relative;
+  width: min(100%, 794px);
+  min-height: unset;
+  padding: 0;
+  background: #ffffff;
+  color: #111827;
+  box-sizing: border-box;
+  font-family: "Malgun Gothic", "Apple SD Gothic Neo", Arial, sans-serif;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.templateImage {
+  display: block;
+  width: 100%;
+  height: auto;
+  user-select: none;
+  pointer-events: none;
+}
+
+.templateOverlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.templateInput,
+.templateTextarea,
+.templateSelect,
+.templateCheckbox {
+  position: absolute;
+  z-index: 10;
+  box-sizing: border-box;
+  font-family: "Malgun Gothic", "Apple SD Gothic Neo", Arial, sans-serif;
+}
+
+.templateInput,
+.templateTextarea,
+.templateSelect {
+  padding: 0.25% 0.6%;
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.72);
+  color: #111827;
+  font-size: clamp(7px, 1.35vw, 12px);
+  line-height: 1.35;
+  outline: none;
+}
+
+.templateInput:focus,
+.templateTextarea:focus,
+.templateSelect:focus {
+  border-color: #2563eb;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+}
+
+.templateTextarea {
+  resize: none;
+}
+
+.templateSelect {
+  cursor: pointer;
+}
+
+.templateCheckbox {
+  margin: 0;
+  accent-color: #111827;
+  cursor: pointer;
+}
+
+.stampImage {
+  position: absolute;
+  z-index: 8;
+  height: auto;
+  pointer-events: none;
+  opacity: 0.9;
 }

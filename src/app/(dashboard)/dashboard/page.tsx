@@ -38,7 +38,6 @@ import MedicalCertificate from "@/components/MedicalCertificate";
 import CertificatePatientSearch, { CertificatePatientInfo } from "@/components/CertificatePatientSearch";
 import CertificateList, { CertificateItem } from "@/components/CertificateList";
 import CertificateBottom, { type CertificateDiseaseApplyPayload } from "@/components/CertificateBottom";
-import ValidationResults from "@/components/ValidationResults";
 
 function formatLocalDate(date: Date) {
   const year = date.getFullYear();
@@ -501,11 +500,6 @@ export default function DashboardPage() {
                 ensureHistory={ensureHistory}
                 employeeId={employeeId}
                 onHistoryUpdated={() => setHistoryRefreshKey((prev) => prev + 1)}
-              />
-              <ValidationResults
-                historyId={clinicVisit?.historyId}
-                employeeId={employeeId}
-                refreshKey={historyRefreshKey}
               />
             </div>
 

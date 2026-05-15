@@ -70,21 +70,34 @@ export interface PrescriptionRecommendResponse {
   recommended_prescriptions: RecommendedPrescriptionItem[];
 }
 
+export type ValidationJobStatus = "PENDING" | "RUNNING" | "DONE" | "FAILED";
+
+export interface ValidationJobStartResponse {
+  jobId: string;
+  historyId: number;
+  status: ValidationJobStatus;
+}
+
+export interface ValidationJobResponse {
+  jobId: string;
+  historyId: number;
+  status: ValidationJobStatus;
+  summary?: string | null;
+  result?: {
+    overallStatus?: string;
+    summary?: string;
+    recommendedPrescriptions?: RecommendedPrescriptionItem[];
+    candidatePrescriptions?: RecommendedPrescriptionItem[];
+    reasoningTrace?: Array<Record<string, unknown>>;
+    validation?: Record<string, unknown>;
+    [key: string]: unknown;
+  } | null;
+  lastError?: string | null;
+}
+
 export interface HistoryListResponse {
   patientId: number;
   histories: HistoryEntry[];
-}
-
-export interface ValidationResultItem {
-  id: number;
-  eventId: number;
-  historyId: number;
-  overallStatus: "PASS" | "WARNING" | "CRITICAL" | "NEEDS_REVIEW" | string;
-  summary: string;
-  resultJson: string;
-  shouldNotifyDoctor: boolean;
-  shouldBlockAutoPrescription: boolean;
-  createdAt: string;
 }
 
 export async function createHistory(payload: HistoryPayload): Promise<HistoryResponse> {
@@ -151,37 +164,21 @@ export async function getHistoryDiagnoses(
   });
 }
 
-export async function getValidationResults(
-  historyId: number,
-  employeeId: number
-): Promise<ValidationResultItem[]> {
-  return get<ValidationResultItem[]>(`/api/histories/${historyId}/validation_results`, {
-    params: { employeeId },
-  });
-}
-
-export async function runValidationAgent(
-  historyId: number,
-  employeeId: number
-): Promise<ValidationResultItem[]> {
-  return post<ValidationResultItem[], undefined>(
-    `/api/histories/${historyId}/validation_results/run`,
-    undefined,
-    { params: { employeeId }, timeout: 180_000 }
-  );
-}
-
 /** Spring → Python prescription_api → Gemini 등 연쇄 호출용 (기본 axios 15초 초과 방지) */
 const PRESCRIPTION_RECOMMEND_TIMEOUT_MS = 180_000;
 
 export async function recommendPrescriptions(
   payload: PrescriptionRecommendRequestPayload
-): Promise<PrescriptionRecommendResponse> {
-  return post<PrescriptionRecommendResponse, PrescriptionRecommendRequestPayload>(
+): Promise<ValidationJobStartResponse> {
+  return post<ValidationJobStartResponse, PrescriptionRecommendRequestPayload>(
     "/api/agent/prescription/recommend",
     payload,
     { timeout: PRESCRIPTION_RECOMMEND_TIMEOUT_MS }
   );
+}
+
+export async function getValidationJob(jobId: string): Promise<ValidationJobResponse> {
+  return get<ValidationJobResponse>(`/api/validation-jobs/${jobId}`);
 }
 
 export interface PrescriptionFeedbackItemPayload {
