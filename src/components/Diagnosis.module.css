@@ -329,6 +329,58 @@
   color: #d1d5db;
 }
 
+.modalReasons {
+  margin: 10px 0;
+  padding: 10px;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  background: #111827;
+  color: #d1d5db;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.modalReasons strong {
+  display: block;
+  margin-bottom: 6px;
+  color: #f3f4f6;
+}
+
+.modalReasons ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.modalReasons li + li {
+  margin-top: 4px;
+}
+
+.modalReferences {
+  margin: 10px 0;
+  padding: 10px;
+  border: 1px solid #365314;
+  border-radius: 8px;
+  background: #17200f;
+  color: #d9f99d;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.modalReferences strong {
+  display: block;
+  margin-bottom: 6px;
+  color: #ecfccb;
+}
+
+.modalReferences ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.modalReferences li + li {
+  margin-top: 4px;
+}
+
 .modalSelectBtn {
   width: 100%;
   padding: 8px 12px;

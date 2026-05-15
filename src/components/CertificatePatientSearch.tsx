@@ -3,6 +3,7 @@
 import { useState } from "react";
 import styles from "./CertificatePatientSearch.module.css";
 import { getAllPatients, getPatientById } from "@services/certificate";
+import { get } from "@/services/http/client";
 import type { PatientDTO } from "@services/certificate";
 
 export interface CertificatePatientInfo {
@@ -18,11 +19,40 @@ interface Props {
   onPatientFound: (patient: CertificatePatientInfo) => void;
 }
 
+interface WaitingPatient {
+  id: number;
+  patientId: number;
+  deptId: number;
+  symptom?: string | null;
+  entryDate: string;
+  state: string;
+  patientName?: string;
+  department?: string;
+  doctor?: string;
+}
+
+interface CompletedVisitPatient extends CertificatePatientInfo {
+  waitingId: number;
+  entryDate: string;
+  symptom?: string | null;
+}
+
 export default function CertificatePatientSearch({ onPatientFound }: Props) {
   const [patientNumber, setPatientNumber] = useState("");
   const [loading, setLoading] = useState(false);
+  const [completedLoading, setCompletedLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [found, setFound] = useState<CertificatePatientInfo | null>(null);
+  const [completedPatients, setCompletedPatients] = useState<CompletedVisitPatient[]>([]);
+
+  const toCertificatePatientInfo = (detail: PatientDTO): CertificatePatientInfo => ({
+    patientId: detail.id,
+    patientNumber: String(detail.id),
+    patientName: detail.name,
+    identityNumber: detail.identityNumber ?? "",
+    birth: detail.birth ?? "",
+    gender: detail.gender ?? "",
+  });
 
   const handleSearch = async () => {
     const trimmed = patientNumber.trim();
@@ -58,14 +88,7 @@ export default function CertificatePatientSearch({ onPatientFound }: Props) {
         // get_all 결과 그대로 사용
       }
 
-      const info: CertificatePatientInfo = {
-        patientId: detail.id,
-        patientNumber: String(detail.id),
-        patientName: detail.name,
-        identityNumber: detail.identityNumber ?? "",
-        birth: detail.birth ?? "",
-        gender: detail.gender ?? "",
-      };
+      const info = toCertificatePatientInfo(detail);
 
       setFound(info);
       onPatientFound(info);
@@ -78,6 +101,66 @@ export default function CertificatePatientSearch({ onPatientFound }: Props) {
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") handleSearch();
+  };
+
+  const handleLoadCompletedPatients = async () => {
+    setCompletedLoading(true);
+    setError(null);
+    try {
+      const waitingList = await get<WaitingPatient[]>("/api/waiting/get_list");
+      const completed = waitingList
+        .filter((item) => item.state === "completed")
+        .sort((a, b) => new Date(b.entryDate).getTime() - new Date(a.entryDate).getTime())
+        .slice(0, 20);
+
+      const rows: CompletedVisitPatient[] = [];
+      for (const visit of completed) {
+        try {
+          const detail = await getPatientById(visit.patientId);
+          rows.push({
+            ...toCertificatePatientInfo(detail),
+            waitingId: visit.id,
+            entryDate: visit.entryDate,
+            symptom: visit.symptom,
+          });
+        } catch {
+          rows.push({
+            patientId: visit.patientId,
+            patientNumber: String(visit.patientId),
+            patientName: visit.patientName ?? `환자 ${visit.patientId}`,
+            identityNumber: "",
+            birth: "",
+            gender: "",
+            waitingId: visit.id,
+            entryDate: visit.entryDate,
+            symptom: visit.symptom,
+          });
+        }
+      }
+
+      setCompletedPatients(rows);
+      if (rows.length === 0) {
+        setError("진료 완료 상태의 환자가 없습니다.");
+      }
+    } catch {
+      setError("진료 완료 환자 목록을 불러오지 못했습니다.");
+    } finally {
+      setCompletedLoading(false);
+    }
+  };
+
+  const handleSelectCompletedPatient = (patient: CompletedVisitPatient) => {
+    const info: CertificatePatientInfo = {
+      patientId: patient.patientId,
+      patientNumber: patient.patientNumber,
+      patientName: patient.patientName,
+      identityNumber: patient.identityNumber,
+      birth: patient.birth,
+      gender: patient.gender,
+    };
+    setFound(info);
+    setPatientNumber(info.patientNumber);
+    onPatientFound(info);
   };
 
   return (
@@ -108,7 +191,35 @@ export default function CertificatePatientSearch({ onPatientFound }: Props) {
           {loading ? "조회 중…" : "조회"}
         </button>
 
+        <button
+          type="button"
+          className={styles.secondaryButton}
+          onClick={handleLoadCompletedPatients}
+          disabled={completedLoading}
+        >
+          {completedLoading ? "완료 환자 조회 중…" : "진료 완료 환자 조회"}
+        </button>
+
         {error && <p className={styles.error}>{error}</p>}
+
+        {completedPatients.length > 0 && (
+          <div className={styles.completedList}>
+            <p className={styles.resultTitle}>진료 완료 환자</p>
+            {completedPatients.map((patient) => (
+              <button
+                key={`${patient.waitingId}-${patient.patientId}`}
+                type="button"
+                className={styles.completedItem}
+                onClick={() => handleSelectCompletedPatient(patient)}
+              >
+                <span>
+                  {patient.patientName} ({patient.patientNumber})
+                </span>
+                <small>{patient.entryDate.slice(0, 16).replace("T", " ")}</small>
+              </button>
+            ))}
+          </div>
+        )}
 
         {found && (
           <div className={styles.result}>

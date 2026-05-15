@@ -21,6 +21,77 @@ type DiagnosisProps = {
   onHistoryUpdated?: () => void;
 };
 
+function asText(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function extractValidationReasons(job: ValidationJobResponse | null): string[] {
+  const result = job?.result;
+  if (!result) return [];
+
+  const reasons: string[] = [];
+  const overallReason = asText(result.reason);
+  if (overallReason) reasons.push(overallReason);
+
+  const checks = Array.isArray(result.checks) ? result.checks : [];
+  checks.forEach((item) => {
+    const message = asText(item.message);
+    const action = asText(item.recommendedAction);
+    if (message) reasons.push(message);
+    if (action) reasons.push(`권고: ${action}`);
+  });
+
+  const suspectedIssues = Array.isArray(result.suspectedIssues) ? result.suspectedIssues : [];
+  suspectedIssues.forEach((item) => {
+    const description = asText(item.description);
+    const reason = asText(item.reason);
+    if (description) reasons.push(description);
+    if (reason) reasons.push(`이유: ${reason}`);
+  });
+
+  const reasoningTrace = Array.isArray(result.reasoningTrace) ? result.reasoningTrace : [];
+  reasoningTrace.slice(-3).forEach((step) => {
+    const action = asText(step.action);
+    const observation = step.observation;
+    let observationText = "";
+    if (typeof observation === "string") {
+      observationText = observation;
+    } else if (observation && typeof observation === "object") {
+      const status = asText((observation as Record<string, unknown>).status);
+      const evidence = (observation as Record<string, unknown>).evidence;
+      const evidenceText = Array.isArray(evidence)
+        ? evidence.map((item) => String(item)).join(", ")
+        : "";
+      observationText = [status, evidenceText].filter(Boolean).join(" - ");
+    }
+    if (action && observationText) {
+      reasons.push(`${action}: ${observationText}`);
+    }
+  });
+
+  return Array.from(new Set(reasons.filter(Boolean))).slice(0, 6);
+}
+
+function extractPubmedReferences(job: ValidationJobResponse | null): string[] {
+  const validation = job?.result?.validation;
+  const pubmedEvidence =
+    validation && typeof validation === "object" && Array.isArray(validation.pubmedEvidence)
+      ? validation.pubmedEvidence
+      : [];
+
+  return pubmedEvidence.slice(0, 3).flatMap((article) => {
+    if (!article || typeof article !== "object") return [];
+    const row = article as Record<string, unknown>;
+    const title = asText(row.title);
+    const pmid = asText(row.pmid);
+    const source = asText(row.source);
+    const pubdate = asText(row.pubdate);
+    if (!title) return [];
+    const meta = [source, pubdate, pmid ? `PMID ${pmid}` : ""].filter(Boolean).join(", ");
+    return [`${title}${meta ? ` (${meta})` : ""}`];
+  });
+}
+
 export default function Diagnosis({ clinicVisit, ensureHistory, employeeId, onHistoryUpdated }: DiagnosisProps) {
   const { diseases, diagnoses, prescriptionFeedback, addDiagnosis, removeDiagnosis, clearDiagnoses, setPrescriptionFeedback, clearPrescriptionFeedback } = useMedicalSelection();
   const [saving, setSaving] = useState(false);
@@ -285,6 +356,26 @@ export default function Diagnosis({ clinicVisit, ensureHistory, employeeId, onHi
               <p className={styles.modalReason}>
                 {validationModal.result?.summary ?? validationModal.summary ?? "검증 결과를 확인했습니다."}
               </p>
+              {extractValidationReasons(validationModal).length > 0 && (
+                <div className={styles.modalReasons}>
+                  <strong>검증 이유</strong>
+                  <ul>
+                    {extractValidationReasons(validationModal).map((reason) => (
+                      <li key={reason}>{reason}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {extractPubmedReferences(validationModal).length > 0 && (
+                <div className={styles.modalReferences}>
+                  <strong>PubMed 참고 근거</strong>
+                  <ul>
+                    {extractPubmedReferences(validationModal).map((reference) => (
+                      <li key={reference}>{reference}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               {(
                 validationModal.result?.recommendedPrescriptions ??
                 validationModal.result?.candidatePrescriptions ??

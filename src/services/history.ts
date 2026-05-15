@@ -86,8 +86,11 @@ export interface ValidationJobResponse {
   result?: {
     overallStatus?: string;
     summary?: string;
+    reason?: string;
     recommendedPrescriptions?: RecommendedPrescriptionItem[];
     candidatePrescriptions?: RecommendedPrescriptionItem[];
+    checks?: Array<Record<string, unknown>>;
+    suspectedIssues?: Array<Record<string, unknown>>;
     reasoningTrace?: Array<Record<string, unknown>>;
     validation?: Record<string, unknown>;
     [key: string]: unknown;
