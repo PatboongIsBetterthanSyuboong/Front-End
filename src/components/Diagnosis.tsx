@@ -78,18 +78,24 @@ function extractPubmedReferences(job: ValidationJobResponse | null): string[] {
     validation && typeof validation === "object" && Array.isArray(validation.pubmedEvidence)
       ? validation.pubmedEvidence
       : [];
+  const summary =
+    validation && typeof validation === "object"
+      ? asText(validation.pubmedEvidenceSummary)
+      : "";
 
-  return pubmedEvidence.slice(0, 3).flatMap((article) => {
+  const references = pubmedEvidence.slice(0, 3).flatMap((article) => {
     if (!article || typeof article !== "object") return [];
     const row = article as Record<string, unknown>;
     const title = asText(row.title);
     const pmid = asText(row.pmid);
     const source = asText(row.source);
     const pubdate = asText(row.pubdate);
+    const abstractSnippet = asText(row.abstractSnippet);
     if (!title) return [];
     const meta = [source, pubdate, pmid ? `PMID ${pmid}` : ""].filter(Boolean).join(", ");
-    return [`${title}${meta ? ` (${meta})` : ""}`];
+    return [`${title}${meta ? ` (${meta})` : ""}${abstractSnippet ? ` - 초록: ${abstractSnippet}` : ""}`];
   });
+  return summary ? [`근거 요약: ${summary}`, ...references] : references;
 }
 
 export default function Diagnosis({ clinicVisit, ensureHistory, employeeId, onHistoryUpdated }: DiagnosisProps) {

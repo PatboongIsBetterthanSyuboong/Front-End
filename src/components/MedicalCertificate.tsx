@@ -6,7 +6,9 @@ import html2canvas from "html2canvas";
 import {
   generateDocumentCertificateByHistory,
   HttpError,
+  saveDocumentCertificate,
 } from "@/services";
+import { setAccessToken, setRefreshToken } from "@/lib/auth/token";
 import styles from "./MedicalCertificate.module.css";
 import { CertificateItem, CertificateType } from "./CertificateList";
 import type { CertificatePatientInfo } from "./CertificatePatientSearch";
@@ -28,7 +30,12 @@ interface TemplateControl {
 /** AI 미리보기 모달에서 수락·거절 후 저장 시 APPROVE/REJECT/MODIFY 판단에 사용 */
 type AiModalResolution =
   | { accepted: true; proposedText: string }
-  | { accepted: false };
+  | { accepted: false; proposedText: string };
+
+interface TokenEnvelope {
+  accessToken?: string;
+  refreshToken?: string;
+}
 
 const PURPOSE_OPTIONS = [
   "사내 제출용",
@@ -209,6 +216,54 @@ export default function MedicalCertificate({
     return "미선택";
   };
 
+  const createCertificatePdfBlob = async (): Promise<Blob> => {
+    if (!certificatePageRef.current) {
+      throw new Error("진단서 화면을 찾을 수 없습니다.");
+    }
+    const canvas = await html2canvas(certificatePageRef.current, {
+      backgroundColor: "#ffffff",
+      scale: 2,
+      useCORS: true,
+      onclone: (_doc, cloned) => {
+        cloned.querySelectorAll<HTMLElement>("input, textarea, select").forEach((el) => {
+          el.style.boxShadow = "none";
+          el.style.outline = "none";
+        });
+      },
+    });
+    const pngDataUrl = canvas.toDataURL("image/png");
+    const pngBytes = await fetch(pngDataUrl).then((r) => r.arrayBuffer());
+    const pdfDoc = await PDFDocument.create();
+    const page = pdfDoc.addPage([595.28, 841.89]);
+    const pngImage = await pdfDoc.embedPng(pngBytes);
+    const { width, height } = page.getSize();
+    page.drawImage(pngImage, { x: 0, y: 0, width, height });
+    const savedBytes = await pdfDoc.save();
+    return new Blob([savedBytes.buffer as ArrayBuffer], {
+      type: "application/pdf",
+    });
+  };
+
+  const getCertificateFilename = (): string => {
+    if (!selected) return "진단서.pdf";
+    const patientName = fieldValues[selected.type].patientName || "진단서";
+    return `${selected.label}_${patientName}.pdf`;
+  };
+
+  const getFeedbackType = (): "APPROVE" | "MODIFY" | "REJECT" | "NONE" => {
+    if (!selected || !resolvedAiRound) return "NONE";
+    if (!resolvedAiRound.accepted) return "REJECT";
+    const currentOpinion = (fieldValues[selected.type].opinion ?? "").trim();
+    return currentOpinion === resolvedAiRound.proposedText.trim() ? "APPROVE" : "MODIFY";
+  };
+
+  const applySaveResponseTokens = (payload: unknown) => {
+    if (!payload || typeof payload !== "object") return;
+    const envelope = payload as TokenEnvelope;
+    if (envelope.accessToken) setAccessToken(envelope.accessToken);
+    if (envelope.refreshToken) setRefreshToken(envelope.refreshToken);
+  };
+
   const handleAiGenerate = async () => {
     if (!selected) return;
     const historyId = diagnosisApply?.historyId;
@@ -249,40 +304,57 @@ export default function MedicalCertificate({
     }
     setSaving(true);
     try {
-      const canvas = await html2canvas(certificatePageRef.current, {
-        backgroundColor: "#ffffff",
-        scale: 2,
-        useCORS: true,
-        onclone: (_doc, cloned) => {
-          cloned.querySelectorAll<HTMLElement>("input, textarea, select").forEach((el) => {
-            el.style.boxShadow = "none";
-            el.style.outline = "none";
-          });
-        },
-      });
-      const pngDataUrl = canvas.toDataURL("image/png");
-      const pngBytes = await fetch(pngDataUrl).then((r) => r.arrayBuffer());
-      const pdfDoc = await PDFDocument.create();
-      const page = pdfDoc.addPage([595.28, 841.89]);
-      const pngImage = await pdfDoc.embedPng(pngBytes);
-      const { width, height } = page.getSize();
-      page.drawImage(pngImage, { x: 0, y: 0, width, height });
-
-      const savedBytes = await pdfDoc.save();
-      const blob = new Blob([savedBytes.buffer as ArrayBuffer], {
-        type: "application/pdf",
-      });
+      const blob = await createCertificatePdfBlob();
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
-      const patientName = fieldValues[selected.type].patientName || "진단서";
       link.href = url;
-      link.download = `${selected.label}_${patientName}.pdf`;
+      link.download = getCertificateFilename();
       link.click();
       URL.revokeObjectURL(url);
       setNoticeModal("PDF 다운로드가 완료되었습니다.");
     } catch (error: unknown) {
       console.error("진단서 PDF 생성 실패", error);
       setNoticeModal("PDF 생성에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveToDatabase = async () => {
+    if (!selected) return;
+    const historyId = diagnosisApply?.historyId;
+    if (historyId == null) {
+      setNoticeModal("진단서에 상병을 먼저 적용해 주세요.");
+      return;
+    }
+    if (aiPreviewModal != null) {
+      setNoticeModal("AI 생성 내용에 먼저 수락 또는 거절을 선택해 주세요.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const blob = await createCertificatePdfBlob();
+      const formData = new FormData();
+      const savedOpinion = fieldValues[selected.type].opinion ?? "";
+      formData.append("historyId", String(historyId));
+      formData.append("pdfFile", blob, getCertificateFilename());
+      formData.append("agentUsed", String(resolvedAiRound != null));
+      formData.append(
+        "originalMedicalCertificate",
+        resolvedAiRound?.proposedText ?? ""
+      );
+      formData.append("savedMedicalCertificate", savedOpinion);
+      formData.append("feedbackType", getFeedbackType());
+      const response = await saveDocumentCertificate(formData);
+      applySaveResponseTokens(response);
+      setNoticeModal("진단서 내용이 DB에 저장되었습니다.");
+    } catch (error: unknown) {
+      console.error("진단서 저장 실패", error);
+      if (error instanceof HttpError) {
+        setNoticeModal(`진단서 저장에 실패했습니다. [${error.status}] ${error.message}`);
+      } else {
+        setNoticeModal("진단서 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+      }
     } finally {
       setSaving(false);
     }
@@ -300,7 +372,8 @@ export default function MedicalCertificate({
   };
 
   const handleAiPreviewReject = () => {
-    setResolvedAiRound({ accepted: false });
+    if (!aiPreviewModal) return;
+    setResolvedAiRound({ accepted: false, proposedText: aiPreviewModal.text });
     setAiPreviewModal(null);
   };
 
@@ -472,6 +545,19 @@ export default function MedicalCertificate({
             }
           >
             {saving ? "PDF 생성 중…" : "PDF 다운로드"}
+          </button>
+          <button
+            type="button"
+            className={styles.saveButton}
+            onClick={handleSaveToDatabase}
+            disabled={
+              !selected ||
+              saving ||
+              aiGenerating ||
+              aiPreviewModal != null
+            }
+          >
+            {saving ? "저장 중…" : "저장"}
           </button>
         </div>
       </div>
