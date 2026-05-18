@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getAllUsers, setRole } from "@/services/super";
+import { createUser, getAllUsers, setRole } from "@/services/super";
 import { User, Role } from "@/types/user";
 import styles from "./page.module.css";
 
@@ -9,7 +9,15 @@ export default function SuperPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [updatingRoles, setUpdatingRoles] = useState<Set<number>>(new Set());
+  const [newUser, setNewUser] = useState({
+    name: "",
+    username: "",
+    password: "",
+    deptId: "1",
+    role: Role.DOCTOR,
+  });
 
   useEffect(() => {
     loadUsers();
@@ -54,6 +62,44 @@ export default function SuperPage() {
     }
   }
 
+  async function handleCreateUser(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setSuccessMessage(null);
+
+    const deptId = Number(newUser.deptId);
+    if (!newUser.name.trim() || !newUser.username.trim() || !newUser.password.trim()) {
+      setError("이름, 사용자명, 비밀번호를 모두 입력해주세요.");
+      return;
+    }
+    if (!Number.isFinite(deptId) || deptId <= 0) {
+      setError("부서 ID는 1 이상의 숫자여야 합니다.");
+      return;
+    }
+
+    try {
+      await createUser({
+        name: newUser.name.trim(),
+        username: newUser.username.trim(),
+        password: newUser.password,
+        deptId,
+        role: newUser.role,
+      });
+      setSuccessMessage("직원이 추가되었습니다.");
+      setNewUser({
+        name: "",
+        username: "",
+        password: "",
+        deptId: "1",
+        role: Role.DOCTOR,
+      });
+      await loadUsers();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "직원 추가에 실패했습니다";
+      setError(message);
+    }
+  }
+
   function getRoleLabel(role: Role): string {
     const roleMap: Record<Role, string> = {
       [Role.DEFAULT]: "일반",
@@ -95,6 +141,74 @@ export default function SuperPage() {
             {error}
           </div>
         )}
+        {successMessage && (
+          <div className={styles.successMessage} role="status">
+            {successMessage}
+          </div>
+        )}
+
+        <div className={styles.formCard}>
+          <h2 className={styles.sectionTitle}>직원 추가</h2>
+          <form className={styles.createForm} onSubmit={handleCreateUser}>
+            <label className={styles.formField}>
+              <span>이름</span>
+              <input
+                value={newUser.name}
+                onChange={(e) => setNewUser((prev) => ({ ...prev, name: e.target.value }))}
+                placeholder="홍길동"
+                className={styles.formInput}
+                required
+              />
+            </label>
+            <label className={styles.formField}>
+              <span>사용자명</span>
+              <input
+                value={newUser.username}
+                onChange={(e) => setNewUser((prev) => ({ ...prev, username: e.target.value }))}
+                placeholder="doctor01"
+                className={styles.formInput}
+                required
+              />
+            </label>
+            <label className={styles.formField}>
+              <span>비밀번호</span>
+              <input
+                type="password"
+                value={newUser.password}
+                onChange={(e) => setNewUser((prev) => ({ ...prev, password: e.target.value }))}
+                className={styles.formInput}
+                required
+              />
+            </label>
+            <label className={styles.formField}>
+              <span>부서 ID</span>
+              <input
+                type="number"
+                min={1}
+                value={newUser.deptId}
+                onChange={(e) => setNewUser((prev) => ({ ...prev, deptId: e.target.value }))}
+                className={styles.formInput}
+                required
+              />
+            </label>
+            <label className={styles.formField}>
+              <span>역할</span>
+              <select
+                value={newUser.role}
+                onChange={(e) => setNewUser((prev) => ({ ...prev, role: e.target.value as Role }))}
+                className={styles.formInput}
+              >
+                <option value={Role.DOCTOR}>{getRoleLabel(Role.DOCTOR)}</option>
+                <option value={Role.NURSE}>{getRoleLabel(Role.NURSE)}</option>
+                <option value={Role.RECEPTIONIST}>{getRoleLabel(Role.RECEPTIONIST)}</option>
+                <option value={Role.SUPER_USER}>{getRoleLabel(Role.SUPER_USER)}</option>
+              </select>
+            </label>
+            <button type="submit" className={styles.createButton}>
+              직원 추가
+            </button>
+          </form>
+        </div>
 
         {/* 컨텐츠 카드 */}
         <div className={styles.contentCard}>

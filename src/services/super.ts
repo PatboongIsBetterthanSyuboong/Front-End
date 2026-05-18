@@ -1,4 +1,4 @@
-import { get, put } from "./http/client";
+import { get, post, put } from "./http/client";
 import { Role, User } from "@/types/user";
 
 interface SetRoleRequestBody {
@@ -16,7 +16,19 @@ export async function setRole(body: SetRoleRequestBody): Promise<void> {
     await put<void, { role: Role }>(`/api/super/set_role/${id}`, { role });
 }
 
-export async function getAllUsers(): Promise<GetAllUsersResponseBody> {
-    const data = await get<GetAllUsersResponseBody>("/api/super/get_all_users");
+export interface CreateUserRequestBody {
+    name: string;
+    deptId: number;
+    role: Role;
+    username: string;
+    password: string;
+}
+
+export async function createUser(body: CreateUserRequestBody): Promise<void> {
+    await post<void, CreateUserRequestBody>("/api/super/create_user", body);
+}
+
+export async function getAllUsers(): Promise<GetAllUsersResponseBody | User[]> {
+    const data = await get<GetAllUsersResponseBody | User[]>("/api/super/get_all_users");
     return data;
 }

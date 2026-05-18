@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import styles from "./WaitingStatus.module.css";
 import { getAccessToken } from "@/lib/auth/token";
 import { PatientInfo } from "./PatientInfoBar";
@@ -16,6 +16,11 @@ interface WaitingPatient {
   department?: string; // 진료과목
   doctor?: string; // 진료의사
   visitTime?: string; // 접수시간
+  visitType?: string; // 초/재진
+  visitReason?: string; // 내원사유
+  visitRoute?: string; // 내원경로
+  treatmentType?: string; // 진료유형
+  memo?: string; // 당일메모
 }
 
 interface PatientDetail {
@@ -33,7 +38,9 @@ export interface WaitingVisitContext {
   patientId: number;
   deptId: number;
   entryDate: string;
+  visitDate?: string;
   symptom: string;
+  memo?: string;
 }
 
 interface WaitingStatusProps {
@@ -45,11 +52,37 @@ export default function WaitingStatus({ onPatientSelect }: WaitingStatusProps = 
   const [waitingList, setWaitingList] = useState<WaitingPatient[]>([]);
   const [patientInfoMap, setPatientInfoMap] = useState<Map<number, PatientDetail>>(new Map());
   const [isLoading, setIsLoading] = useState(false);
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; patientId: number } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; waitingId: number } | null>(null);
   const contextMenuRef = useRef<HTMLDivElement>(null);
 
+  // 환자 정보 가져오기
+  const fetchPatientInfos = useCallback(async (waitingData: WaitingPatient[]) => {
+    const patientIds = [...new Set(waitingData.map(w => w.patientId))];
+    const patientMap = new Map<number, PatientDetail>();
+
+    for (const patientId of patientIds) {
+      try {
+        const response = await fetch(`http://localhost:8080/api/patients/search_patient/${patientId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
+        
+        if (response.ok) {
+          const patientInfo: PatientDetail = await response.json();
+          patientMap.set(patientId, patientInfo);
+        }
+      } catch (error) {
+        console.error(`환자 정보 조회 실패 (ID: ${patientId}):`, error);
+      }
+    }
+
+    setPatientInfoMap(patientMap);
+  }, []);
+
   // 대기 목록 가져오기
-  const fetchWaitingList = async () => {
+  const fetchWaitingList = useCallback(async () => {
     try {
       setIsLoading(true);
       console.log("대기 목록 조회 시작");
@@ -73,38 +106,12 @@ export default function WaitingStatus({ onPatientSelect }: WaitingStatusProps = 
     } finally {
       setIsLoading(false);
     }
-  };
-
-  // 환자 정보 가져오기
-  const fetchPatientInfos = async (waitingData: WaitingPatient[]) => {
-    const patientIds = [...new Set(waitingData.map(w => w.patientId))];
-    const patientMap = new Map<number, PatientDetail>();
-
-    for (const patientId of patientIds) {
-      try {
-        const response = await fetch(`http://localhost:8080/api/patients/search_patient/${patientId}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        });
-        
-        if (response.ok) {
-          const patientInfo: PatientDetail = await response.json();
-          patientMap.set(patientId, patientInfo);
-        }
-      } catch (error) {
-        console.error(`환자 정보 조회 실패 (ID: ${patientId}):`, error);
-      }
-    }
-
-    setPatientInfoMap(patientMap);
-  };
+  }, [fetchPatientInfos]);
 
   // 컴포넌트 마운트 시 데이터 로드
   useEffect(() => {
     fetchWaitingList();
-  }, []);
+  }, [fetchWaitingList]);
 
   // 상태별 환자 수 계산
   const getStatusCounts = () => {
@@ -197,9 +204,9 @@ export default function WaitingStatus({ onPatientSelect }: WaitingStatusProps = 
       name: patientInfo?.name ?? waitingPatient.patientName,
       age: patientInfo?.birth ? calculateAgeWithMonths(patientInfo.birth) : "-",
       gender: patientInfo?.gender,
-      doctor: "-",
+      doctor: waitingPatient.doctor || "-",
       date: formatDate(waitingPatient.entryDate),
-      time: formatTime(waitingPatient.entryDate),
+      time: waitingPatient.visitTime || formatTime(waitingPatient.entryDate),
       address: "-",
       phone: patientInfo?.phoneNumber,
     };
@@ -209,7 +216,9 @@ export default function WaitingStatus({ onPatientSelect }: WaitingStatusProps = 
       patientId: waitingPatient.patientId,
       deptId: waitingPatient.deptId,
       entryDate: waitingPatient.entryDate,
+      visitDate: formatDate(waitingPatient.entryDate),
       symptom: waitingPatient.symptom ?? "",
+      memo: waitingPatient.memo ?? "",
     };
 
     onPatientSelect(selectedPatient, visitContext);
@@ -230,16 +239,6 @@ export default function WaitingStatus({ onPatientSelect }: WaitingStatusProps = 
   };
 
 
-  // 상태 한글 변환
-  const getStatusLabel = (state: string) => {
-    switch (state) {
-      case "waiting": return "대기";
-      case "hold": return "보류";
-      case "completed": return "완료";
-      default: return state;
-    }
-  };
-
   // 상태별 제목
   const getSectionTitle = () => {
     switch (selectedStatus) {
@@ -251,12 +250,12 @@ export default function WaitingStatus({ onPatientSelect }: WaitingStatusProps = 
   };
 
   // 컨텍스트 메뉴 열기
-  const handleContextMenu = (e: React.MouseEvent, patientId: number) => {
+  const handleContextMenu = (e: React.MouseEvent, waitingId: number) => {
     e.preventDefault();
     setContextMenu({
       x: e.clientX,
       y: e.clientY,
-      patientId: patientId,
+      waitingId,
     });
   };
 
@@ -425,7 +424,7 @@ export default function WaitingStatus({ onPatientSelect }: WaitingStatusProps = 
                       </td>
                       <td 
                         className={styles.patientName}
-                        onContextMenu={(e) => handleContextMenu(e, patient.patientId)}
+                        onContextMenu={(e) => handleContextMenu(e, patient.id)}
                         style={{ cursor: "context-menu" }}
                       >
                         {patientInfo?.name || `환자 ${patient.patientId}`}
@@ -509,13 +508,13 @@ export default function WaitingStatus({ onPatientSelect }: WaitingStatusProps = 
         >
           <button
             className={styles.contextMenuItem}
-            onClick={() => updatePatientStatus(contextMenu.patientId, "hold")}
+            onClick={() => updatePatientStatus(contextMenu.waitingId, "hold")}
           >
             진료 보류 변경
           </button>
           <button
             className={styles.contextMenuItem}
-            onClick={() => updatePatientStatus(contextMenu.patientId, "completed")}
+            onClick={() => updatePatientStatus(contextMenu.waitingId, "completed")}
           >
             진료 완료 변경
           </button>

@@ -37,6 +37,81 @@ interface TokenEnvelope {
   refreshToken?: string;
 }
 
+const PDF_MIN_FONT_SIZE_PX = 6;
+const PDF_MAX_FONT_SIZE_PX = 12;
+
+function parsePixelValue(value: string | null | undefined, fallback: number): number {
+  if (!value) return fallback;
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function fitTextToBox(element: HTMLElement, maxFontSize: number) {
+  const minFontSize = PDF_MIN_FONT_SIZE_PX;
+  let fontSize = Math.min(maxFontSize, PDF_MAX_FONT_SIZE_PX);
+  element.style.fontSize = `${fontSize}px`;
+  element.style.lineHeight = "1.18";
+
+  while (
+    fontSize > minFontSize &&
+    (element.scrollHeight > element.clientHeight || element.scrollWidth > element.clientWidth)
+  ) {
+    fontSize -= 0.5;
+    element.style.fontSize = `${fontSize}px`;
+  }
+}
+
+function getPrintableFieldText(
+  element: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+): string {
+  if (element.tagName === "SELECT") {
+    const select = element as HTMLSelectElement;
+    return select.selectedOptions[0]?.textContent?.trim() ?? select.value;
+  }
+  return element.value;
+}
+
+function replaceFieldWithPrintableText(
+  clonedDoc: Document,
+  element: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+) {
+  if (element.tagName === "INPUT" && (element as HTMLInputElement).type === "checkbox") {
+    element.style.boxShadow = "none";
+    element.style.outline = "none";
+    return;
+  }
+
+  const text = getPrintableFieldText(element);
+  const computed = clonedDoc.defaultView?.getComputedStyle(element);
+  const printable = clonedDoc.createElement("div");
+
+  printable.className = element.className;
+  printable.textContent = text;
+  printable.style.cssText = element.getAttribute("style") ?? "";
+  printable.style.position = computed?.position ?? "absolute";
+  printable.style.zIndex = computed?.zIndex ?? "10";
+  printable.style.boxSizing = "border-box";
+  printable.style.padding = computed?.padding ?? "2px 4px";
+  printable.style.border = "none";
+  printable.style.background = "transparent";
+  printable.style.color = computed?.color ?? "#111827";
+  printable.style.fontFamily = computed?.fontFamily ?? '"Malgun Gothic", Arial, sans-serif';
+  printable.style.whiteSpace = "pre-wrap";
+  printable.style.wordBreak = "break-word";
+  printable.style.overflow = "hidden";
+  printable.style.display = "block";
+
+  element.replaceWith(printable);
+  const maxFontSize = parsePixelValue(computed?.fontSize, PDF_MAX_FONT_SIZE_PX);
+  fitTextToBox(printable, maxFontSize);
+}
+
+function prepareCertificateCloneForPdf(clonedDoc: Document, clonedRoot: HTMLElement) {
+  clonedRoot
+    .querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>("input, textarea, select")
+    .forEach((element) => replaceFieldWithPrintableText(clonedDoc, element));
+}
+
 const PURPOSE_OPTIONS = [
   "사내 제출용",
   "학교 제출용",
@@ -224,11 +299,8 @@ export default function MedicalCertificate({
       backgroundColor: "#ffffff",
       scale: 2,
       useCORS: true,
-      onclone: (_doc, cloned) => {
-        cloned.querySelectorAll<HTMLElement>("input, textarea, select").forEach((el) => {
-          el.style.boxShadow = "none";
-          el.style.outline = "none";
-        });
+      onclone: (clonedDoc, cloned) => {
+        prepareCertificateCloneForPdf(clonedDoc, cloned);
       },
     });
     const pngDataUrl = canvas.toDataURL("image/png");

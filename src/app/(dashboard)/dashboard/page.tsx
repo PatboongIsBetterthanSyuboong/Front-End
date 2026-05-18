@@ -151,13 +151,12 @@ export default function DashboardPage() {
   // 메뉴 접근 권한 체크 함수
   const canAccessMenu = useCallback((menuId: string): boolean => {
     if (!userRole) return false;
-    
-    if (menuId === "환자접수") {
-      return userRole === Role.SUPER_USER || userRole === Role.RECEPTIONIST || userRole === Role.NURSE;
-    } else if (menuId === "진료실") {
-      return userRole === Role.SUPER_USER || userRole === Role.DOCTOR;
-    } else if (menuId === "진단서") {
-      return userRole === Role.SUPER_USER || userRole === Role.DOCTOR;
+
+    if (userRole === Role.SUPER_USER || userRole === Role.DOCTOR) {
+      return ["환자접수", "진료실", "진단서"].includes(menuId);
+    }
+    if (userRole === Role.NURSE || userRole === Role.RECEPTIONIST) {
+      return menuId === "환자접수";
     }
     return false;
   }, [userRole]);
@@ -172,14 +171,12 @@ export default function DashboardPage() {
           setEmployeeId(me.id);
         }
         
-        // 현재 선택된 메뉴에 접근 권한이 없으면 접근 가능한 첫 번째 메뉴로 변경
-        const checkAccess = (menuId: string, userRole: Role): boolean => {
-          if (menuId === "환자접수") {
-            return userRole === Role.SUPER_USER || userRole === Role.RECEPTIONIST;
-          } else if (menuId === "진료실") {
-            return userRole === Role.SUPER_USER || userRole === Role.DOCTOR;
-          } else if (menuId === "진단서") {
-            return userRole === Role.SUPER_USER || userRole === Role.DOCTOR;
+        const checkAccess = (menuId: string, roleValue: Role): boolean => {
+          if (roleValue === Role.SUPER_USER || roleValue === Role.DOCTOR) {
+            return ["환자접수", "진료실", "진단서"].includes(menuId);
+          }
+          if (roleValue === Role.NURSE || roleValue === Role.RECEPTIONIST) {
+            return menuId === "환자접수";
           }
           return false;
         };
@@ -225,7 +222,7 @@ export default function DashboardPage() {
       patientId: clinicVisit.patientId,
       deptId: clinicVisit.deptId || defaultDeptId,
       symptomDetail: clinicVisit.symptom ?? "",
-      memo: "",
+      memo: clinicVisit.memo ?? "",
       entryDate,
     };
 
@@ -305,8 +302,9 @@ export default function DashboardPage() {
         visitNumber: patient.visitNumber,
         deptId: visit?.deptId ?? defaultDeptId,
         waitingId: visit?.waitingId,
-        entryDate: visit?.entryDate,
+        entryDate: visit?.visitDate ?? visit?.entryDate,
         symptom: visit?.symptom ?? "",
+        memo: visit?.memo ?? "",
         historyId: null,
       });
       historyCreationRef.current = null;
@@ -315,14 +313,10 @@ export default function DashboardPage() {
   );
 
   // 진료과 이름을 deptId로 변환하는 함수
-  const getDeptIdFromDepartment = (department: string): number => {
-    const deptMap: Record<string, number> = {
-      "검진": 1,
-      "내과": 2,
-      "정형외과": 3,
-    };
-    return deptMap[department] || defaultDeptId;
-  };
+  const getDeptIdFromDepartment = useCallback((department: string): number => {
+    void department;
+    return defaultDeptId;
+  }, [defaultDeptId]);
 
   // 환자 등록 핸들러
   const handleRegisterPatient = useCallback(async () => {
@@ -402,7 +396,13 @@ export default function DashboardPage() {
         state: "waiting",
         department: medicalData.department, // 진료과목
         doctor: medicalData.doctor, // 진료의사
+        entryDate: `${medicalData.visitDate} ${medicalData.visitTime}:00`,
         visitTime: medicalData.visitTime, // 접수시간
+        visitType: medicalData.visitType, // 초/재진
+        visitReason: medicalData.visitReason, // 내원사유
+        visitRoute: medicalData.visitRoute, // 내원경로
+        treatmentType: medicalData.treatmentType, // 진료유형
+        memo: medicalData.memo, // 당일메모
       };
 
       console.log("대기 목록 등록 시작:", waitingData);
@@ -438,7 +438,7 @@ export default function DashboardPage() {
       console.error("등록 실패:", error);
       alert("등록 중 오류가 발생했습니다. 다시 시도해주세요.");
     }
-  }, [defaultDeptId]);
+  }, [getDeptIdFromDepartment]);
 
   const renderContent = () => {
     if (activeMenu === "환자접수") {

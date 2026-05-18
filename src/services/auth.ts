@@ -29,6 +29,13 @@ export interface CurrentUserProfile {
   username: string;
 }
 
+export interface DoctorProfile {
+  id: number;
+  name: string;
+  deptId: number;
+  username: string;
+}
+
 interface LogoutRequestBody {
   refreshToken: string;
 }
@@ -63,4 +70,8 @@ export async function getRole(): Promise<Role> {
 
 export async function getMe(): Promise<CurrentUserProfile> {
   return get<CurrentUserProfile>("/api/patients/get_me");
+}
+
+export async function getDoctors(): Promise<DoctorProfile[]> {
+  return get<DoctorProfile[]>("/api/patients/doctors");
 }

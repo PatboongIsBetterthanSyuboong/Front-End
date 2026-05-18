@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, forwardRef, useImperativeHandle } from "react";
+import { useEffect, useState, forwardRef, useImperativeHandle } from "react";
+import { getDoctors, type DoctorProfile } from "@/services/auth";
 import styles from "./MedicalInfo.module.css";
 
 export type MedicalInfoFormData = {
@@ -11,7 +12,7 @@ export type MedicalInfoFormData = {
   visitType: string;
   visitReason: string;
   visitRoute: string;
-  insuranceType: string;
+  treatmentType: string;
   memo: string;
 };
 
@@ -21,17 +22,44 @@ export interface MedicalInfoRef {
 }
 
 const MedicalInfo = forwardRef<MedicalInfoRef>((props, ref) => {
+  const getToday = () => new Date().toISOString().slice(0, 10);
+  const getCurrentTime = () => {
+    const now = new Date();
+    return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+  };
   const [formData, setFormData] = useState<MedicalInfoFormData>({
     department: "검진",
-    doctor: "최인우",
-    visitDate: "2025-10-28",
-    visitTime: "08:45",
+    doctor: "",
+    visitDate: getToday(),
+    visitTime: getCurrentTime(),
     visitType: "재진",
     visitReason: "",
     visitRoute: "",
-    insuranceType: "",
+    treatmentType: "",
     memo: "",
   });
+  const [doctors, setDoctors] = useState<DoctorProfile[]>([]);
+
+  useEffect(() => {
+    let ignore = false;
+    async function loadDoctors() {
+      try {
+        const rows = await getDoctors();
+        if (ignore) return;
+        setDoctors(rows);
+        setFormData((prev) => ({
+          ...prev,
+          doctor: prev.doctor || rows[0]?.name || "",
+        }));
+      } catch (error) {
+        console.error("진료의사 목록 조회 실패", error);
+      }
+    }
+    void loadDoctors();
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   const handleInputChange = (
     e: React.ChangeEvent<
@@ -47,13 +75,13 @@ const MedicalInfo = forwardRef<MedicalInfoRef>((props, ref) => {
   const resetForm = () => {
     setFormData({
       department: "검진",
-      doctor: "최인우",
-      visitDate: "2025-10-28",
-      visitTime: "08:45",
+      doctor: doctors[0]?.name || "",
+      visitDate: getToday(),
+      visitTime: getCurrentTime(),
       visitType: "재진",
       visitReason: "",
       visitRoute: "",
-      insuranceType: "",
+      treatmentType: "",
       memo: "",
     });
   };
@@ -97,9 +125,15 @@ const MedicalInfo = forwardRef<MedicalInfoRef>((props, ref) => {
               onChange={handleInputChange}
               className={styles.select}
             >
-              <option value="최인우">최인우</option>
-              <option value="홍길동">홍길동</option>
-              <option value="김철수">김철수</option>
+              {doctors.length === 0 ? (
+                <option value="">등록된 의사 없음</option>
+              ) : (
+                doctors.map((doctor) => (
+                  <option key={doctor.id} value={doctor.name}>
+                    {doctor.name}
+                  </option>
+                ))
+              )}
             </select>
           </div>
         </div>
@@ -177,7 +211,7 @@ const MedicalInfo = forwardRef<MedicalInfoRef>((props, ref) => {
             <label className={styles.label}>진료유형</label>
             <select
               name="treatmentType"
-              value={formData.insuranceType}
+              value={formData.treatmentType}
               onChange={handleInputChange}
               className={styles.select}
             >
