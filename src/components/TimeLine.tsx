@@ -4,10 +4,12 @@ import { useEffect, useMemo, useState } from "react";
 import styles from "./TimeLine.module.css";
 import { getPatientHistories } from "@/services/history";
 import type { HistoryEntry } from "@/types/history";
+import type { ClinicVisitContext } from "@/types/clinic";
 
 type TimeLineProps = {
   employeeId: number;
   patientId?: number | null;
+  currentVisit?: ClinicVisitContext | null;
   refreshKey?: number;
   /** 진료실: 내원 카드 더블클릭 시 해당 history의 상병·처방을 불러올 때 사용 */
   onHistoryEntryDoubleClick?: (entry: HistoryEntry) => void;
@@ -37,6 +39,13 @@ function formatSymptom(symptom?: string | null) {
   return symptom;
 }
 
+function displayValue(value?: string | number | null) {
+  if (value == null || String(value).trim().length === 0) {
+    return "-";
+  }
+  return String(value);
+}
+
 function formatLocalDate(date: Date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -47,6 +56,7 @@ function formatLocalDate(date: Date) {
 export default function TimeLine({
   employeeId,
   patientId,
+  currentVisit,
   refreshKey,
   onHistoryEntryDoubleClick,
 }: TimeLineProps) {
@@ -136,7 +146,32 @@ export default function TimeLine({
           </div>
         ) : error ? (
           <div className={styles.error}>{error}</div>
-        ) : histories.length === 0 ? (
+        ) : (
+          <>
+            {currentVisit ? (
+              <article className={`${styles.item} ${styles.receptionItem}`}>
+                <div className={styles.dateRow}>
+                  <span className={styles.date}>
+                    {displayValue(currentVisit.visitDate ?? currentVisit.entryDate)}
+                  </span>
+                </div>
+                <div className={styles.infoGrid}>
+                  <div>
+                    <span className={styles.infoLabel}>진료과목</span>
+                    <strong>{displayValue(currentVisit.department)}</strong>
+                  </div>
+                  <div>
+                    <span className={styles.infoLabel}>진료의사</span>
+                    <strong>{displayValue(currentVisit.doctor)}</strong>
+                  </div>
+                  <div className={styles.infoWide}>
+                    <span className={styles.infoLabel}>증상</span>
+                    <strong>{displayValue(currentVisit.symptom)}</strong>
+                  </div>
+                </div>
+              </article>
+            ) : null}
+            {histories.length === 0 ? (
           <div className={styles.emptyState}>등록된 내원 기록이 없습니다.</div>
         ) : (
           [...groupedByYear.entries()].map(([year, entries]) => (
@@ -154,7 +189,7 @@ export default function TimeLine({
                   }
                   title={
                     onHistoryEntryDoubleClick
-                      ? "더블클릭: 해당 내원의 상병·처방 불러오기"
+                      ? "더블클릭: 해당 내원 기록 불러오기"
                       : undefined
                   }
                 >
@@ -177,6 +212,8 @@ export default function TimeLine({
               ))}
             </div>
           ))
+            )}
+          </>
         )}
       </div>
     </section>

@@ -102,7 +102,7 @@ export default function ViewDataBase() {
       setDiagnoseHasMore(totalLoaded < response.total);
     } catch (err) {
       console.error("Failed to load diagnoses", err);
-      setErrors((prev) => ({ ...prev, diagnose: "진단 정보를 불러오지 못했습니다." }));
+      setErrors((prev) => ({ ...prev, diagnose: "처방 정보를 불러오지 못했습니다." }));
     } finally {
       if (isInitialLoad) {
         setDiagnoseLoading(false);
@@ -256,7 +256,7 @@ export default function ViewDataBase() {
             type="button"
             disabled={isInitialLoading && activeTab !== "diagnose"}
           >
-            진단
+            처방
           </button>
         </div>
 

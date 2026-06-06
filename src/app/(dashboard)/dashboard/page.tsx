@@ -50,12 +50,14 @@ function formatLocalDate(date: Date) {
 function ClinicTimelineSection({
   employeeId,
   patientId,
+  currentVisit,
   refreshKey,
   setClinicVisit,
   onPendingHistoryReset,
 }: {
   employeeId: number;
   patientId?: number | null;
+  currentVisit?: ClinicVisitContext | null;
   refreshKey?: number;
   setClinicVisit: Dispatch<SetStateAction<ClinicVisitContext | null>>;
   onPendingHistoryReset: () => void;
@@ -81,6 +83,15 @@ function ClinicTimelineSection({
           historyId: entry.id,
           visitNumber: prev?.visitNumber,
           waitingId: prev?.waitingId,
+          department: prev?.department,
+          doctor: prev?.doctor,
+          visitDate: prev?.visitDate,
+          visitTime: prev?.visitTime,
+          visitType: prev?.visitType,
+          visitReason: prev?.visitReason,
+          visitRoute: prev?.visitRoute,
+          treatmentType: prev?.treatmentType,
+          memo: prev?.memo,
         }));
         replaceDiseases(diseaseRows.map((d) => ({ id: d.id, code: d.code, name: d.name })));
         replaceDiagnoses(
@@ -113,6 +124,7 @@ function ClinicTimelineSection({
     <TimeLine
       employeeId={employeeId}
       patientId={patientId}
+      currentVisit={currentVisit}
       refreshKey={refreshKey}
       onHistoryEntryDoubleClick={handleHistoryDoubleClick}
     />
@@ -303,6 +315,14 @@ export default function DashboardPage() {
         deptId: visit?.deptId ?? defaultDeptId,
         waitingId: visit?.waitingId,
         entryDate: visit?.visitDate ?? visit?.entryDate,
+        department: visit?.department ?? "",
+        doctor: visit?.doctor ?? patient.doctor ?? "",
+        visitDate: visit?.visitDate ?? "",
+        visitTime: visit?.visitTime ?? patient.time ?? "",
+        visitType: visit?.visitType ?? "",
+        visitReason: visit?.visitReason ?? "",
+        visitRoute: visit?.visitRoute ?? "",
+        treatmentType: visit?.treatmentType ?? "",
         symptom: visit?.symptom ?? "",
         memo: visit?.memo ?? "",
         historyId: null,
@@ -478,6 +498,7 @@ export default function DashboardPage() {
               <ClinicTimelineSection
                 employeeId={employeeId}
                 patientId={clinicPatientId}
+                currentVisit={clinicVisit}
                 refreshKey={historyRefreshKey}
                 setClinicVisit={setClinicVisit}
                 onPendingHistoryReset={resetPendingHistoryCreation}

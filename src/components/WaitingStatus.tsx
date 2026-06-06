@@ -38,7 +38,14 @@ export interface WaitingVisitContext {
   patientId: number;
   deptId: number;
   entryDate: string;
+  department?: string;
+  doctor?: string;
   visitDate?: string;
+  visitTime?: string;
+  visitType?: string;
+  visitReason?: string;
+  visitRoute?: string;
+  treatmentType?: string;
   symptom: string;
   memo?: string;
 }
@@ -216,7 +223,14 @@ export default function WaitingStatus({ onPatientSelect }: WaitingStatusProps = 
       patientId: waitingPatient.patientId,
       deptId: waitingPatient.deptId,
       entryDate: waitingPatient.entryDate,
+      department: waitingPatient.department ?? "",
+      doctor: waitingPatient.doctor ?? "",
       visitDate: formatDate(waitingPatient.entryDate),
+      visitTime: waitingPatient.visitTime ?? "",
+      visitType: waitingPatient.visitType ?? "",
+      visitReason: waitingPatient.visitReason ?? "",
+      visitRoute: waitingPatient.visitRoute ?? "",
+      treatmentType: waitingPatient.treatmentType ?? "",
       symptom: waitingPatient.symptom ?? "",
       memo: waitingPatient.memo ?? "",
     };

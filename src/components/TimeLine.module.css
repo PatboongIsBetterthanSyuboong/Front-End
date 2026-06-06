@@ -101,6 +101,12 @@
   outline-offset: 2px;
 }
 
+.receptionItem {
+  margin-bottom: 12px;
+  background: linear-gradient(135deg, rgba(33, 65, 96, 0.9), rgba(23, 38, 62, 0.92));
+  border-color: rgba(111, 191, 255, 0.28);
+}
+
 .item:before {
   content: "";
   position: absolute;
@@ -148,6 +154,36 @@
   line-height: 1.6;
   color: rgba(241, 243, 255, 0.85);
   white-space: pre-line;
+}
+
+.infoGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 12px;
+  font-size: 12px;
+}
+
+.infoGrid > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.infoLabel {
+  color: rgba(241, 243, 255, 0.55);
+  font-size: 11px;
+}
+
+.infoGrid strong {
+  color: #f8f9ff;
+  font-weight: 600;
+  line-height: 1.35;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.infoWide {
+  grid-column: 1 / -1;
 }
 
 .meta {
