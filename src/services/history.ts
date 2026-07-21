@@ -1,4 +1,5 @@
 import { get, post, put } from "./http/client";
+import type { PaginatedResponse } from "@/types/api";
 import type { HistoryEntry } from "@/types/history";
 
 export interface HistoryPayload {
@@ -60,6 +61,15 @@ export interface RecommendedPrescriptionItem {
   prescription_name: string;
   reason: string;
   confidence_score: number;
+  dose: number;
+  time: number;
+  days: number;
+}
+
+export interface PrescriptionSearchItem {
+  id: number;
+  code: string;
+  name: string;
   dose: number;
   time: number;
   days: number;
@@ -182,6 +192,20 @@ export async function recommendPrescriptions(
 
 export async function getValidationJob(jobId: string): Promise<ValidationJobResponse> {
   return get<ValidationJobResponse>(`/api/validation-jobs/${jobId}`);
+}
+
+export async function searchPrescriptions(
+  query: string,
+  page = 0,
+  size = 20
+): Promise<PaginatedResponse<PrescriptionSearchItem>> {
+  return get<PaginatedResponse<PrescriptionSearchItem>>("/api/diagnoses", {
+    params: {
+      page,
+      size,
+      ...(query.trim() ? { query: query.trim() } : {}),
+    },
+  });
 }
 
 export interface PrescriptionFeedbackItemPayload {

@@ -8,7 +8,9 @@ import {
   getValidationJob,
   recommendPrescriptions,
   savePrescriptionFeedback,
+  searchPrescriptions,
   setHistoryDiagnoses,
+  type PrescriptionSearchItem,
   type RecommendedPrescriptionItem,
   type ValidationJobResponse,
 } from "@/services/history";
@@ -21,8 +23,25 @@ type DiagnosisProps = {
   onHistoryUpdated?: () => void;
 };
 
+type PrescriptionPickerState = {
+  item: RecommendedPrescriptionItem;
+  key: string;
+};
+
 function asText(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
+}
+
+function recommendationKey(item: RecommendedPrescriptionItem): string {
+  return `${item.rank}:${item.prescription_code}:${item.prescription_name}`;
+}
+
+function buildPrescriptionSearchQuery(item: RecommendedPrescriptionItem): string {
+  const name = asText(item.prescription_name);
+  if (name && name !== "미기재") return name;
+  const code = asText(item.prescription_code);
+  if (code && code !== "미기재") return code;
+  return "";
 }
 
 function extractValidationReasons(job: ValidationJobResponse | null): string[] {
@@ -105,6 +124,11 @@ export default function Diagnosis({ clinicVisit, ensureHistory, employeeId, onHi
   const [aiRecommendations, setAiRecommendations] = useState<RecommendedPrescriptionItem[]>([]);
   const [selectedRecommendationKeys, setSelectedRecommendationKeys] = useState<string[]>([]);
   const [validationModal, setValidationModal] = useState<ValidationJobResponse | null>(null);
+  const [prescriptionPicker, setPrescriptionPicker] = useState<PrescriptionPickerState | null>(null);
+  const [prescriptionSearchDraft, setPrescriptionSearchDraft] = useState("");
+  const [prescriptionSearchResults, setPrescriptionSearchResults] = useState<PrescriptionSearchItem[]>([]);
+  const [prescriptionSearchLoading, setPrescriptionSearchLoading] = useState(false);
+  const [prescriptionSearchError, setPrescriptionSearchError] = useState<string | null>(null);
   const [aiSessionHistoryId, setAiSessionHistoryId] = useState<number | null>(null);
   const [aiSessionHistoryDiagnoseId, setAiSessionHistoryDiagnoseId] = useState<number | null>(null);
   const prevPatientIdRef = useRef<number | null>(null);
@@ -117,6 +141,7 @@ export default function Diagnosis({ clinicVisit, ensureHistory, employeeId, onHi
       clearPrescriptionFeedback();
       setAiRecommendations([]);
       setSelectedRecommendationKeys([]);
+      setPrescriptionPicker(null);
       setAiSessionHistoryId(null);
       setAiSessionHistoryDiagnoseId(null);
     }
@@ -126,6 +151,7 @@ export default function Diagnosis({ clinicVisit, ensureHistory, employeeId, onHi
     clearPrescriptionFeedback();
     setAiRecommendations([]);
     setSelectedRecommendationKeys([]);
+    setPrescriptionPicker(null);
     setAiSessionHistoryId(null);
     setAiSessionHistoryDiagnoseId(null);
   }, [clearPrescriptionFeedback, clinicVisit?.historyId]);
@@ -194,7 +220,7 @@ export default function Diagnosis({ clinicVisit, ensureHistory, employeeId, onHi
     } finally {
       setSaving(false);
     }
-  }, [aiSessionHistoryDiagnoseId, clinicVisit, diagnoses, employeeId, ensureHistory, prescriptionFeedback]);
+  }, [aiSessionHistoryDiagnoseId, clinicVisit, diagnoses, employeeId, ensureHistory, onHistoryUpdated, prescriptionFeedback]);
 
   const handleGenerateByAI = useCallback(async () => {
     if (!clinicVisit) {
@@ -231,7 +257,7 @@ export default function Diagnosis({ clinicVisit, ensureHistory, employeeId, onHi
       }
 
       setAiRecommendations(recommended);
-      setSelectedRecommendationKeys(recommended.map((item) => `${item.rank}:${item.prescription_code}:${item.prescription_name}`));
+      setSelectedRecommendationKeys(recommended.map(recommendationKey));
       setAiSessionHistoryId(historyId);
       setAiSessionHistoryDiagnoseId(null);
       clearPrescriptionFeedback();
@@ -271,6 +297,63 @@ export default function Diagnosis({ clinicVisit, ensureHistory, employeeId, onHi
     );
   }, []);
 
+  const fetchPrescriptionCandidates = useCallback(async (query: string) => {
+    setPrescriptionSearchLoading(true);
+    setPrescriptionSearchError(null);
+    try {
+      const response = await searchPrescriptions(query, 0, 20);
+      setPrescriptionSearchResults(response.items);
+      if (response.items.length === 0) {
+        setPrescriptionSearchError("조회된 처방이 없습니다. 다른 검색어를 입력해주세요.");
+      }
+    } catch (error) {
+      console.error("처방 상세 조회 실패:", error);
+      setPrescriptionSearchResults([]);
+      setPrescriptionSearchError("처방 DB 조회에 실패했습니다.");
+    } finally {
+      setPrescriptionSearchLoading(false);
+    }
+  }, []);
+
+  const openPrescriptionPicker = useCallback((item: RecommendedPrescriptionItem) => {
+    const key = recommendationKey(item);
+    const query = buildPrescriptionSearchQuery(item);
+    setPrescriptionPicker({ item, key });
+    setPrescriptionSearchDraft(query);
+    setPrescriptionSearchResults([]);
+    setPrescriptionSearchError(null);
+    void fetchPrescriptionCandidates(query);
+  }, [fetchPrescriptionCandidates]);
+
+  const handlePrescriptionSearchSubmit = useCallback(() => {
+    void fetchPrescriptionCandidates(prescriptionSearchDraft);
+  }, [fetchPrescriptionCandidates, prescriptionSearchDraft]);
+
+  const handleSelectPrescriptionDetail = useCallback((selected: PrescriptionSearchItem) => {
+    if (!prescriptionPicker) return;
+
+    const nextItem: RecommendedPrescriptionItem = {
+      ...prescriptionPicker.item,
+      id: selected.id,
+      prescription_code: selected.code,
+      prescription_name: selected.name,
+      dose: selected.dose ?? 0,
+      time: selected.time ?? 0,
+      days: selected.days ?? 0,
+    };
+    const nextKey = recommendationKey(nextItem);
+
+    setAiRecommendations((prev) =>
+      prev.map((item) => recommendationKey(item) === prescriptionPicker.key ? nextItem : item)
+    );
+    setSelectedRecommendationKeys((prev) =>
+      prev.includes(prescriptionPicker.key)
+        ? prev.map((key) => key === prescriptionPicker.key ? nextKey : key)
+        : prev
+    );
+    setPrescriptionPicker(null);
+  }, [prescriptionPicker]);
+
   const handleApplySelectedRecommendations = useCallback(async () => {
     if (aiRecommendations.length === 0) {
       alert("먼저 AI 추천을 생성해주세요.");
@@ -283,7 +366,7 @@ export default function Diagnosis({ clinicVisit, ensureHistory, employeeId, onHi
     let unmappedCount = 0;
 
     for (const item of aiRecommendations) {
-      const key = `${item.rank}:${item.prescription_code}:${item.prescription_name}`;
+      const key = recommendationKey(item);
       const isAccepted = selectedRecommendationKeys.includes(key);
 
       feedback.push({
@@ -405,6 +488,73 @@ export default function Diagnosis({ clinicVisit, ensureHistory, employeeId, onHi
           </div>
         </div>
       )}
+      {prescriptionPicker && (
+        <div className={styles.modalBackdrop} role="presentation">
+          <div className={styles.modalPanel} role="dialog" aria-modal="true">
+            <h3 className={styles.modalTitle}>처방 상세 선택</h3>
+            <div className={styles.modalCard}>
+              <p className={styles.modalReason}>
+                AI 추천 처방과 가장 가까운 DB 처방을 검색해서 선택해주세요.
+              </p>
+              <div className={styles.prescriptionSearchRow}>
+                <input
+                  type="text"
+                  value={prescriptionSearchDraft}
+                  className={styles.prescriptionSearchInput}
+                  placeholder="처방명 또는 코드 검색"
+                  onChange={(event) => setPrescriptionSearchDraft(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      handlePrescriptionSearchSubmit();
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  className={styles.prescriptionSearchButton}
+                  disabled={prescriptionSearchLoading}
+                  onClick={handlePrescriptionSearchSubmit}
+                >
+                  검색
+                </button>
+              </div>
+              <div className={styles.prescriptionResultList}>
+                {prescriptionSearchLoading ? (
+                  <div className={styles.prescriptionSearchMessage}>조회 중...</div>
+                ) : prescriptionSearchResults.length > 0 ? (
+                  prescriptionSearchResults.map((item) => (
+                    <div key={item.id} className={styles.prescriptionResultItem}>
+                      <div>
+                        <div className={styles.modalCode}>{item.code}</div>
+                        <div className={styles.modalName}>{item.name}</div>
+                      </div>
+                      <button
+                        type="button"
+                        className={styles.prescriptionPickButton}
+                        onClick={() => handleSelectPrescriptionDetail(item)}
+                      >
+                        선택
+                      </button>
+                    </div>
+                  ))
+                ) : (
+                  <div className={styles.prescriptionSearchMessage}>
+                    {prescriptionSearchError ?? "검색어를 입력해 처방을 조회해주세요."}
+                  </div>
+                )}
+              </div>
+            </div>
+            <button
+              type="button"
+              className={styles.modalCloseBtn}
+              onClick={() => setPrescriptionPicker(null)}
+            >
+              닫기
+            </button>
+          </div>
+        </div>
+      )}
       <div className={styles.header}>
         <h3>처방</h3>
         <div className={styles.controls}>
@@ -445,18 +595,27 @@ export default function Diagnosis({ clinicVisit, ensureHistory, employeeId, onHi
             </div>
             <div className={styles.aiList}>
               {aiRecommendations.map((item) => {
-                const key = `${item.rank}:${item.prescription_code}:${item.prescription_name}`;
+                const key = recommendationKey(item);
                 return (
-                  <label key={key} className={styles.aiItem}>
-                    <input
-                      type="checkbox"
-                      checked={selectedRecommendationKeys.includes(key)}
-                      onChange={() => toggleRecommendation(key)}
-                    />
-                    <span>
-                      [{item.rank}] {item.prescription_name} ({item.prescription_code})
-                    </span>
-                  </label>
+                  <div key={key} className={styles.aiItem}>
+                    <label className={styles.aiCheckLabel}>
+                      <input
+                        type="checkbox"
+                        checked={selectedRecommendationKeys.includes(key)}
+                        onChange={() => toggleRecommendation(key)}
+                      />
+                      <span>
+                        [{item.rank}] {item.prescription_name} ({item.prescription_code})
+                      </span>
+                    </label>
+                    <button
+                      type="button"
+                      className={styles.detailSelectButton}
+                      onClick={() => openPrescriptionPicker(item)}
+                    >
+                      처방 상세 선택
+                    </button>
+                  </div>
                 );
               })}
             </div>

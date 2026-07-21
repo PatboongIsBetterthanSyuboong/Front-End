@@ -106,9 +106,32 @@
 .aiItem {
   display: flex;
   gap: 8px;
-  align-items: flex-start;
+  align-items: center;
+  justify-content: space-between;
   font-size: 13px;
   color: #e5e7eb;
+}
+
+.aiCheckLabel {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.detailSelectButton {
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  border: 1px solid #4b5563;
+  border-radius: 6px;
+  background: #1f2937;
+  color: #dbeafe;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.detailSelectButton:hover {
+  background: #374151;
 }
 
 
@@ -395,6 +418,88 @@
 
 .modalSelectBtn:hover {
   background: #6d28d9;
+}
+
+.prescriptionSearchRow {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  margin: 10px 0 12px;
+}
+
+.prescriptionSearchInput {
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid #4b5563;
+  border-radius: 6px;
+  background: #111827;
+  color: #f3f4f6;
+  font-size: 13px;
+}
+
+.prescriptionSearchInput::placeholder {
+  color: #9ca3af;
+}
+
+.prescriptionSearchButton {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  background: #7c3aed;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.prescriptionSearchButton:hover {
+  background: #6d28d9;
+}
+
+.prescriptionSearchButton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.prescriptionResultList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 320px;
+  overflow: auto;
+}
+
+.prescriptionResultItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  background: #111827;
+}
+
+.prescriptionPickButton {
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 6px;
+  background: #2563eb;
+  color: #fff;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.prescriptionPickButton:hover {
+  background: #1d4ed8;
+}
+
+.prescriptionSearchMessage {
+  padding: 14px 10px;
+  text-align: center;
+  color: #d1d5db;
+  font-size: 13px;
 }
 
 .modalCloseBtn {
